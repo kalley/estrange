@@ -10,8 +10,8 @@ use std::process::Command;
 use tempfile::NamedTempFile;
 
 #[derive(Parser)]
-#[command(name = "riff")]
-#[command(about = "A CLI tool for daily creative riffs on random prompts")]
+#[command(name = "estrange")]
+#[command(about = "A CLI tool for daily creative estrangement exercises")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -179,8 +179,8 @@ fn get_db_path() -> Result<PathBuf> {
         .or_else(|| dirs::home_dir())
         .context("Could not find suitable directory for database")?;
 
-            path.push("riff");
-            path.push("riff.db");
+            path.push("estrange");
+            path.push("estrange.db");
     Ok(path)
 }
 
@@ -256,7 +256,7 @@ fn main() -> Result<()> {
             let entries = db.list_entries(limit)?;
 
             if entries.is_empty() {
-                println!("No entries found. Use 'riff add' to create your first entry!");
+                println!("No entries found. Use 'estrange add' to create your first entry!");
                 return Ok(());
             }
 
@@ -283,7 +283,7 @@ fn main() -> Result<()> {
         Commands::Stats => {
             let (total, first, last) = db.get_stats()?;
 
-            println!("📊 Riff Statistics");
+            println!("📊 Estrange Statistics");
             println!("═══════════════════════════════");
             println!("Total entries: {}", total);
             println!("First entry: {}", first);
