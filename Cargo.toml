@@ -1,8 +1,8 @@
 [package]
-name = "riff"
+name = "estrange"
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/kalley/riff"
+repository = "https://github.com/kalley/estrange"
 
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }

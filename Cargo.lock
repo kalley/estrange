@@ -223,6 +223,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "estrange"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "dirs",
+ "rusqlite",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "fallible-iterator"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -444,19 +457,6 @@ dependencies = [
  "getrandom 0.2.16",
  "libredox",
  "thiserror",
-]
-
-[[package]]
-name = "riff"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "dirs",
- "rusqlite",
- "serde_json",
- "tempfile",
 ]
 
 [[package]]
