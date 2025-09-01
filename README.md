@@ -27,6 +27,9 @@ export GEMINI_API_KEY="your-key-here"
 
 ## Usage
 
+# Note: estrange embraces the rhythm of once daily
+# Multiple calls return the same prompt until tomorrow
+
 ### The Daily Ritual
 Simply run:
 ```bash
@@ -117,7 +120,8 @@ Your creative journey belongs to you:
 - **Portable:** Copy your database file to move between machines
 - **Private:** Nothing leaves your device unless you choose to export
 - **Location:**
-  - Linux/Mac: `~/.local/share/estrange/estrange.db`
+  - Linux: `~/.local/share/estrange/estrange.db`
+  - Mac: `~/Library/Application Support/estrange/estrange.db`
   - Windows: `%LOCALAPPDATA%/estrange/estrange.db`
 
 ## Creative Pattern Analysis
@@ -143,6 +147,8 @@ Feed this to your favorite LLM and ask:
 - **Consistency over intensity:** Small daily disruptions compound
 - **Privacy over sharing:** Your creative space, your rules
 - **Questions over answers:** Good prompts generate more questions
+- **Estrangement over familiarity:** Break patterns, see with fresh eyes
+- **Autonomy over convenience:** You own your creative journey completely
 
 *"The real voyage of discovery consists not in seeking new landscapes, but in having new eyes." - Marcel Proust*
 
@@ -151,7 +157,6 @@ Feed this to your favorite LLM and ask:
 Ideas brewing for future versions:
 - Custom prompt template system (bring your own creative philosophy)
 - Pattern visualization (see your creative DNA graphically)
-- Collaborative analysis (optional sharing with other estrangers)
 - Multi-modal responses (sketching, voice notes, mixed media)
 - Temporal analysis (how does creativity change with seasons, moods, events?)
 

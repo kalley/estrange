@@ -397,6 +397,29 @@ impl Database {
 
         Ok(serde_json::to_string_pretty(&export)?)
     }
+
+
+    fn get_today_entry(&self) -> Result<Option<CreativityEntry>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, prompt, response, created_at FROM creative_prompts
+             WHERE date(substr(created_at, 1, 10)) = date('now')
+             ORDER BY created_at DESC LIMIT 1"
+        )?;
+
+        let mut rows = stmt.query_map([], |row| {
+            Ok(CreativityEntry {
+                id: row.get(0)?,
+                prompt: row.get(1)?,
+                response: row.get(2)?,
+                created_at: row.get(3)?,
+            })
+        })?;
+
+        match rows.next() {
+            Some(entry) => Ok(Some(entry?)),
+            None => Ok(None),
+        }
+    }
 }
 
 fn get_db_path() -> Result<PathBuf> {
@@ -411,6 +434,13 @@ fn get_db_path() -> Result<PathBuf> {
 
 // Helper function for the core receive-and-respond flow
 async fn receive_and_respond(db: &Database, manual_mode: bool) -> Result<()> {
+    if let Some(today_entry) = db.get_today_entry()? {
+        println!("🌅 Today's creative disruption already processed:");
+        print_entry(&today_entry);
+        println!("💫 Carry this strangeness with you. Tomorrow brings new disruption.");
+        return Ok(());
+    }
+
     let prompt = if manual_mode {
         println!("📝 Enter your creative prompt:");
         let mut manual_prompt = String::new();
