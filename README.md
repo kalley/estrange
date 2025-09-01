@@ -1,10 +1,10 @@
 # estrange 🌀
 
-A simple CLI tool for daily creative exercises. Get a random prompt, estrange yourself from routine thinking, track your creative growth over time.
+A CLI tool for daily creative disruption. Receive unexpected prompts, surrender to strangeness, witness your creative patterns emerge over time.
 
 ## Why?
 
-Creative thinking is like a muscle - it gets stronger with regular exercise. But work creativity often comes with constraints and expectations. `estrange` gives you a space for unconstrained creative exploration, one prompt at a time.
+Routine thinking creates invisible walls. `estrange` disrupts these patterns through daily creative disruption - one unexpected prompt at a time. It's not about producing brilliant ideas (though you might). It's about keeping your mind flexible and surprising.
 
 ## Installation
 
@@ -19,125 +19,152 @@ cp target/release/estrange /usr/local/bin/  # or wherever you keep binaries
 ### Binary Releases
 Check the [releases page](https://github.com/yourusername/estrange/releases) for pre-built binaries.
 
+### API Key Setup (Optional)
+For automatic prompt generation, set your Gemini API key:
+```bash
+export GEMINI_API_KEY="your-key-here"
+```
+
 ## Usage
 
-### Daily Workflow
-1. Get a random creative prompt from your favorite LLM (see examples below)
-2. Run `estrange add` and enter the prompt
-3. Your editor opens with a template - brain dump whatever comes to mind
-4. Save and quit - your creative exploration is stored
+### The Daily Ritual
+Simply run:
+```bash
+estrange
+```
+
+This will:
+1. 🌀 Receive today's creative disruption (auto-generated)
+2. ✨ Present you with an unexpected prompt
+3. 📝 Open your editor to process the strangeness
+4. 💾 Store your creative response
+
+### Manual Mode
+Want to bring your own prompt?
+```bash
+estrange --manual
+```
 
 ### Commands
 
 ```bash
-# Add a new creative exploration
-estrange add
+# The core ritual - receive disruption and respond
+estrange
 
-# List recent entries (default: 10)
-estrange list
-estrange list --limit 5
+# Enter your own prompt instead of receiving one
+estrange --manual
 
-# Search your explorations
-estrange search "doorknob"
-estrange search "gravity"
+# Browse your creative journey
+estrange retrace           # (alias: list)
+estrange retrace --limit 5
 
-# See your creative statistics
-estrange stats
+# Search through your responses for patterns
+estrange excavate "doorknob"    # (alias: search)
+estrange excavate "gravity"
 
-# Export all data as JSON (great for analysis)
-estrange export
+# Reflect on your creative patterns and growth
+estrange witness           # (alias: stats)
+
+# Preserve your creative journey
+estrange archive           # (alias: export)
 ```
 
-## Getting Creative Prompts
+## Example Disruptions
 
-The magic happens when you feed these prompt generators to an LLM:
+Here are some prompts `estrange` might serve you:
 
-### Basic Prompt Generator
+**"A doorknob that remembers every hand that's touched it"**
+*What stories would it tell? How would this change architecture? Privacy? Security?*
+
+**"Gravity works sideways on Tuesdays"**
+*How would cities adapt? What would Tuesday fashion look like? Emergency protocols?*
+
+**"The sound purple makes when it's thinking"**
+*What does color consciousness feel like? How would you compose this? Paint it? Live it?*
+
+**"Libraries where books read themselves to you, but only whisper the boring parts"**
+*What gets whispered? What stays silent? How do you find the exciting parts?*
+
+## Prompt Generators
+
+`estrange` uses this default generator:
 ```
 Generate one unexpected creative stimulus - it could be anything: an object, a situation, a constraint, a weird fact, a made-up rule, or anything else that could spark ideas. Just give me the one thing, no explanation.
 ```
 
-### Alternative Prompt Styles
+### Alternative Generators (for manual mode)
 
-**For object-based thinking:**
-```
-Give me one random object, concept, or phenomenon with an unusual twist or property. No explanation, just the thing.
-```
-
-**For constraint-based creativity:**
-```
-Give me one creative constraint or limitation that could spark interesting ideas. It could be a rule, a restriction, or an unusual requirement.
-```
-
-**For "what if" scenarios:**
+**Assumption Breakers:**
 ```
 Give me a "what if" scenario that challenges a common assumption about how the world works. Just the scenario, no elaboration.
 ```
 
-**For abstract prompts:**
+**Abstract Provocations:**
 ```
 Generate one abstract creative prompt that could be interpreted in multiple ways - it might be poetic, philosophical, or just wonderfully weird.
 ```
 
-## Example Prompts and Responses
-
-Here are some example prompts and the kinds of thinking they might spark:
-
-**Prompt:** "A doorknob that remembers every hand that's touched it"
-**Possible explorations:** Security implications, emotional imprints, stories it could tell, therapeutic applications, privacy concerns, historical documentation...
-
-**Prompt:** "Gravity works sideways on Tuesdays"
-**Possible explorations:** Urban planning adaptations, Tuesday fashion, emergency protocols, sports rule changes, architectural solutions...
-
-**Prompt:** "The sound purple makes when it's thinking"
-**Possible explorations:** Synesthesia exploration, color psychology, abstract music composition, meditation techniques, AI consciousness metaphors...
-
-## Data Storage
-
-Your explorations live in a local SQLite database:
-- **Linux/Mac:** `~/.local/share/estrange/estrange.db`
-- **Windows:** `%LOCALAPPDATA%/estrange/estrange.db`
-
-The database is portable - just copy it to move your creative history between machines.
-
-## Analysis and Insights
-
-After collecting explorations for a while, try exporting your data and asking an LLM to analyze patterns:
-
-```bash
-estrange export > my-creative-journey.json
+**Constraint Catalysts:**
+```
+Give me one creative constraint or limitation that could spark interesting ideas. It could be a rule, a restriction, or an unusual requirement.
 ```
 
-Then ask questions like:
-- "What themes do I gravitate toward in my creative thinking?"
-- "How has my creative process evolved over time?"
-- "What types of prompts spark the most expansive thinking for me?"
-- "Are there creative territories I haven't explored yet?"
+## Data Autonomy
+
+Your creative journey belongs to you:
+
+- **Local storage:** SQLite database, no cloud dependencies
+- **Portable:** Copy your database file to move between machines
+- **Private:** Nothing leaves your device unless you choose to export
+- **Location:**
+  - Linux/Mac: `~/.local/share/estrange/estrange.db`
+  - Windows: `%LOCALAPPDATA%/estrange/estrange.db`
+
+## Creative Pattern Analysis
+
+After weeks or months of disruptions, analyze your creative DNA:
+
+```bash
+estrange archive > my-creative-journey.json
+```
+
+Feed this to your favorite LLM and ask:
+- "What creative territories do I gravitate toward?"
+- "Which prompts sparked my most expansive thinking?"
+- "How has my creative process evolved?"
+- "What patterns am I stuck in? How can I break them?"
+- "What types of strangeness do I resist? Why might that be?"
 
 ## Philosophy
 
-`estrange` is built on the idea that creativity thrives with:
-- **Low friction:** One command, open editor, done
-- **No judgment:** Your explorations are private by default
-- **Ownership:** Your data, your tool, your creative journey
-- **Consistency:** Small daily practice over sporadic bursts
+`estrange` embraces:
+- **Surrender over control:** Let strangeness work through you
+- **Process over product:** The thinking matters more than the output
+- **Consistency over intensity:** Small daily disruptions compound
+- **Privacy over sharing:** Your creative space, your rules
+- **Questions over answers:** Good prompts generate more questions
 
-The goal isn't to produce brilliant ideas every day (though you might!). It's to keep your creative thinking flexible and surprising.
+*"The real voyage of discovery consists not in seeking new landscapes, but in having new eyes." - Marcel Proust*
+
+## Future Disruptions
+
+Ideas brewing for future versions:
+- Custom prompt template system (bring your own creative philosophy)
+- Pattern visualization (see your creative DNA graphically)
+- Collaborative analysis (optional sharing with other estrangers)
+- Multi-modal responses (sketching, voice notes, mixed media)
+- Temporal analysis (how does creativity change with seasons, moods, events?)
 
 ## Contributing
 
-This is a simple tool that does one thing well. That said, if you have ideas for improvements, issues, or want to add features, pull requests are welcome.
+Found a bug? Have an idea for creative enhancement? Pull requests welcome.
 
-Some ideas for future enhancements:
-- Built-in LLM integration for automatic prompt generation
-- Configurable prompt templates
-- Basic analytics/visualization
-- Export formats for different analysis tools
+This tool believes in doing one thing well: **daily creative disruption**. Feature requests should align with this core mission.
 
 ## License
 
-MIT License - use it, modify it, share it.
+MIT License - disrupt freely, share widely.
 
 ---
 
-*"The best way to have a good idea is to have a lot of ideas." - Linus Pauling*
+*"I can't understand why people are frightened of new ideas. I'm frightened of the old ones." - John Cage*

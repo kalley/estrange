@@ -1,0 +1,8 @@
+# Estrange Configuration
+# Copy this file to config.toml and add your API key
+
+# Get a free Gemini API key at: https://ai.google.dev/
+gemini_api_key = "your-gemini-api-key-here"
+
+# Optional: customize your prompt template
+# default_prompt_template = "Your custom prompt generator here..."
