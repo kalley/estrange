@@ -27,8 +27,8 @@ export GEMINI_API_KEY="your-key-here"
 
 ## Usage
 
-# Note: estrange embraces the rhythm of once daily
-# Multiple calls return the same prompt until tomorrow
+Note: estrange embraces the rhythm of once daily
+Multiple calls return the same prompt until tomorrow
 
 ### The Daily Ritual
 Simply run:
