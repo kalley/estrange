@@ -25,22 +25,32 @@ jobs:
             -H "x-goog-api-key: $GEMINI_API_KEY" \
             -H 'Content-Type: application/json' \
             -X POST \
-            -d '{
-              "contents": [
+            -d "{
+              \"contents\": [
                 {
-                  "parts": [
+                  \"parts\": [
                     {
-                      "text": "$PROMPT"
+                      \"text\": \"$PROMPT\"
                     }
                   ]
                 }
-              ]
-            }' | jq '.candidates[0].content.parts[0].text' > data/daily-prompt.json
+              ],
+              \"generationConfig\": {
+                \"responseMimeType\": \"application/json\",
+                \"responseSchema\": {
+                  \"type\": \"OBJECT\",
+                  \"properties\": {
+                    \"prompt\": { \"type\": \"STRING\" },
+                    \"tags\": { \"type\": \"ARRAY\", \"items\": { \"type\": \"STRING\" } }
+                  }
+                }
+              }
+            }" > data/daily-prompt.json
 
       - name: Add metadata
         run: |
           # Add timestamp and ID for tracking
-          jq '. + {
+          jq '.candidates[0].content.parts[0].text | fromjson | . + {
             "generated_at": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
             "id": "'$(date +%s)'",
             "version": "web-v1"

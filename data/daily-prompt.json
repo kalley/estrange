@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"prompt\": \"A world where every shadow is sentient and has its own personality, often disagreeing with its person.\", \"tags\": [\"fantasy\", \"sentient\", \"shadow\", \"personality\", \"conflict\"]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 48,
+    "candidatesTokenCount": 43,
+    "totalTokenCount": 317,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 48
+      }
+    ],
+    "thoughtsTokenCount": 226
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "KeC-aPCuCN_Uz7IP5si38As"
+}
