@@ -1,7 +1,7 @@
 <h1 valign="middle">
-  <img src="./estrange-logo.svg" alt="Estrange Logo" width="32" />
+  <img src="./assets/estrange-logo.svg" alt="Estrange Logo" width="32" />
   estrange
-</h1>  
+</h1>
 
 A CLI tool for daily creative disruption. Receive unexpected prompts, surrender to strangeness, witness your creative patterns emerge over time.
 

@@ -1,0 +1,61 @@
+name: Daily Creative Prompt Generation
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 6 AM UTC, adjusts for most timezones
+  workflow_dispatch:
+
+jobs:
+  generate-prompt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate Creative Prompt
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          # Create directories first
+          mkdir -p data
+          mkdir -p apps/web/public/data
+          # Meta-prompt for generating creative exercises
+          PROMPT="You are a creativity coach. Generate a single, specific creative prompt that encourages mindful artistic exploration. The prompt should be accessible to any skill level, take 10-30 minutes to complete, and focus on process over outcome. Include a brief 1-2 sentence reflection question. Format as JSON with fields: prompt, reflection_question, estimated_time, tags."
+
+          curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent" \
+            -H "x-goog-api-key: $GEMINI_API_KEY" \
+            -H 'Content-Type: application/json' \
+            -X POST \
+            -d '{
+              "contents": [
+                {
+                  "parts": [
+                    {
+                      "text": "$PROMPT"
+                    }
+                  ]
+                }
+              ]
+            }' | jq '.candidates[0].content.parts[0].text' > data/daily-prompt.json
+
+      - name: Add metadata
+        run: |
+          # Add timestamp and ID for tracking
+          jq '. + {
+            "generated_at": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+            "id": "'$(date +%s)'",
+            "version": "web-v1"
+          }' data/daily-prompt.json > apps/web/public/data/daily-prompt.json
+
+      - name: Archive prompt (optional)
+        run: |
+          mkdir -p data/archive
+          cp apps/web/public/data/daily-prompt.json "data/archive/prompt-$(date +%Y-%m-%d).json"
+
+      - name: Commit and push
+        run: |
+          git config --local user.email "creative-bot@github.com"
+          git config --local user.name "Creative Prompt Bot"
+          git add apps/web/public/data/  # Point to the right location
+          git add data/archive/  # If you're keeping archives
+          git commit -m "✨ Daily creative prompt $(date +%Y-%m-%d)" || exit 0
+          git push
