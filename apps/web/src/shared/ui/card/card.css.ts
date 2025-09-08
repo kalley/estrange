@@ -6,4 +6,5 @@ export const card = style({
 	border: `1px solid ${themeVars.color.primary}`,
 	background: themeVars.color.surface,
 	padding: baseVars.spacing.md,
+	width: "100%",
 });
