@@ -19,8 +19,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           # Create directories first
-          mkdir -p data
-          mkdir -p apps/web/public/data
+          mkdir -p data/raw
           # Meta-prompt for generating creative exercises
           PROMPT="Generate one unexpected creative stimulus - it could be anything: an object, a situation, a constraint, a weird fact, a made-up rule, or anything else that could spark ideas. Just give me the one thing, no explanation."
 
@@ -48,28 +47,25 @@ jobs:
                   }
                 }
               }
-            }" > data/daily-prompt.json
+            }" > data/raw/prompt-$(date +%Y-%m-%d).json
 
       - name: Add metadata
         run: |
-          # Add timestamp and ID for tracking
+          mkdir -p apps/web/public/data
+          mkdir -p data/processed
           jq '.candidates[0].content.parts[0].text | fromjson | . + {
             "generated_at": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
             "id": "'$(date +%s)'",
             "version": "web-v1"
-          }' data/daily-prompt.json > apps/web/public/data/daily-prompt.json
+          }' data/raw/prompt-$(date +%Y-%m-%d).json > apps/web/public/data/daily-prompt.json
 
-      - name: Archive prompt (optional)
-        run: |
-          mkdir -p data/archive
-          cp apps/web/public/data/daily-prompt.json "data/archive/prompt-$(date +%Y-%m-%d).json"
+          cp apps/web/public/data/daily-prompt.json data/processed/prompt-$(date +%Y-%m-%d).json
 
       - name: Commit and push
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add apps/web/public/data/  # Point to the right location
-          git add data/archive/  # If you're keeping archives
+          git add apps/web/public/data/ data/raw/ data/processed/
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
