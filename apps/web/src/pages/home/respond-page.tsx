@@ -14,7 +14,7 @@ export function RespondPage() {
 	const navigate = useNavigate();
 	const [errors, setErrors] = createSignal<Record<string, string>>({});
 
-	const handleSubmit = (event: SubmitEvent) => {
+	const handleSubmit = async (event: SubmitEvent) => {
 		event.preventDefault();
 
 		if (!(event.target instanceof HTMLFormElement)) {
@@ -29,7 +29,7 @@ export function RespondPage() {
 		});
 
 		if (result.success) {
-			savePrompt(result.data);
+			await savePrompt(result.data);
 			navigate("/", { replace: true });
 		} else {
 			const errors: Record<string, string> = {};
