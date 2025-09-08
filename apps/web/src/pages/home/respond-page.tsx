@@ -18,8 +18,6 @@ export function RespondPage() {
 	const todaysPrompt = createAsync(() => fetchDailyPrompt());
 	const [errors, setErrors] = createSignal<Record<string, string>>({});
 
-	console.log(todaysPrompt());
-
 	const handleSubmit = async (event: SubmitEvent) => {
 		event.preventDefault();
 
@@ -31,7 +29,7 @@ export function RespondPage() {
 
 		const result = creativePromptCreate.safeParse({
 			...values,
-			prompt: todaysPrompt(),
+			prompt: todaysPrompt()?.prompt,
 		});
 
 		if (result.success) {
@@ -53,7 +51,7 @@ export function RespondPage() {
 			<Card>
 				<h2>Today's disruption</h2>
 				<hr class={styles.hr} />
-				<p>{todaysPrompt() ?? ""}</p>
+				<p>{todaysPrompt()?.prompt}</p>
 			</Card>
 			<form class={styles.form} onSubmit={handleSubmit}>
 				<Field error={errors().response} label="Response">
