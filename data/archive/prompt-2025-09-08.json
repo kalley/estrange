@@ -1,14 +1,12 @@
 {
-  "prompt": "Choose a small, natural object near you\bba leaf, a pebble, a piece of bark. Spend 15-20 minutes observing it closely. Without trying to perfectly reproduce its form, create a visual response using any medium you like (pencil, paint, collage, etc.) that captures the textures, patterns, and the subtle feelings or sensations you experience while looking at it. Focus on the act of observation and the flow of making marks, rather than the final outcome. Consider: What did you notice about the object that you had never seen before?",
+  "prompt": "A cloud that only rains in reverse.",
   "tags": [
-    "mindfulness",
-    "art_exploration",
-    "nature_study",
-    "process_art",
-    "sensory_art",
-    "meditation"
+    "nature",
+    "fantasy",
+    "physics",
+    "reversal"
   ],
-  "generated_at": "2025-09-08T14:03:55Z",
-  "id": "1757340235",
+  "generated_at": "2025-09-08T15:12:48Z",
+  "id": "1757344368",
   "version": "web-v1"
 }
