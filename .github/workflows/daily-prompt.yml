@@ -4,6 +4,9 @@ on:
     - cron: '0 6 * * *'  # 6 AM UTC, adjusts for most timezones
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   generate-prompt:
     runs-on: ubuntu-latest
@@ -63,9 +66,13 @@ jobs:
 
       - name: Commit and push
         run: |
-          git config --local user.email "creative-bot@github.com"
-          git config --local user.name "Creative Prompt Bot"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
           git add apps/web/public/data/  # Point to the right location
           git add data/archive/  # If you're keeping archives
-          git commit -m "✨ Daily creative prompt $(date +%Y-%m-%d)" || exit 0
-          git push
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "✨ Daily creative prompt $(date +%Y-%m-%d)"
+            git push
+          fi
