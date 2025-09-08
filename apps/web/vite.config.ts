@@ -4,6 +4,7 @@ import solid from "vite-plugin-solid";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+	base: "https://kalley.github.io/estrange",
 	build: {
 		sourcemap: true,
 	},
