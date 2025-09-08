@@ -1,7 +1,10 @@
-import { useNavigate } from "@solidjs/router";
+import { createAsync, useNavigate } from "@solidjs/router";
 import { createSignal } from "solid-js";
-import { creativePromptCreate, savePrompt } from "@/entities/creative-prompts";
-import todaysPrompt from "@/shared/assets/prompt.json";
+import {
+	creativePromptCreate,
+	fetchDailyPrompt,
+	savePrompt,
+} from "@/entities/creative-prompts";
 import { Card } from "@/shared/ui/card/card";
 import { Field } from "@/shared/ui/field";
 import * as styles from "./home-page.css";
@@ -12,7 +15,10 @@ a fragment, a question, a sketch, a refusal — it all counts.`;
 
 export function RespondPage() {
 	const navigate = useNavigate();
+	const todaysPrompt = createAsync(() => fetchDailyPrompt());
 	const [errors, setErrors] = createSignal<Record<string, string>>({});
+
+	console.log(todaysPrompt());
 
 	const handleSubmit = async (event: SubmitEvent) => {
 		event.preventDefault();
@@ -25,7 +31,7 @@ export function RespondPage() {
 
 		const result = creativePromptCreate.safeParse({
 			...values,
-			prompt: todaysPrompt,
+			prompt: todaysPrompt(),
 		});
 
 		if (result.success) {
@@ -47,7 +53,7 @@ export function RespondPage() {
 			<Card>
 				<h2>Today's disruption</h2>
 				<hr class={styles.hr} />
-				<p>{todaysPrompt}</p>
+				<p>{todaysPrompt() ?? ""}</p>
 			</Card>
 			<form class={styles.form} onSubmit={handleSubmit}>
 				<Field error={errors().response} label="Response">

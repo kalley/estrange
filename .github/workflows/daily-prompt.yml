@@ -22,7 +22,7 @@ jobs:
           mkdir -p data
           mkdir -p apps/web/public/data
           # Meta-prompt for generating creative exercises
-          PROMPT="You are a creativity coach. Generate a single, specific creative prompt that encourages mindful artistic exploration. The prompt should be accessible to any skill level, take 10-30 minutes to complete, and focus on process over outcome. Include a brief 1-2 sentence reflection question. Format as JSON with fields: prompt, reflection_question, estimated_time, tags."
+          PROMPT="Generate one unexpected creative stimulus - it could be anything: an object, a situation, a constraint, a weird fact, a made-up rule, or anything else that could spark ideas. Just give me the one thing, no explanation."
 
           curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent" \
             -H "x-goog-api-key: $GEMINI_API_KEY" \
