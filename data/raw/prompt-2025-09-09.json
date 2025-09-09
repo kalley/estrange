@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"prompt\": \"The global supply of red paint has mysteriously run out.\", \"tags\": [\"constraint\", \"resource scarcity\", \"color\", \"unexpected\"]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 48,
+    "candidatesTokenCount": 31,
+    "totalTokenCount": 361,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 48
+      }
+    ],
+    "thoughtsTokenCount": 282
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "ssK_aNzYG7KN_PUProzQcA"
+}
