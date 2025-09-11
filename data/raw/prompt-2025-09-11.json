@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"prompt\":\"A broken antique kaleidoscope that only shows shades of grey.\",\"tags\":[\"object\",\"broken\",\"antique\",\"constraint\",\"visual\"]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 48,
+    "candidatesTokenCount": 27,
+    "totalTokenCount": 329,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 48
+      }
+    ],
+    "thoughtsTokenCount": 254
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "umXCaJr8MoXI-8YPjcq2uAI"
+}
