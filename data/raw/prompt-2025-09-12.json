@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"prompt\":\"A map of a parallel universe where all animals are made of glass.\",\"tags\":[\"map\",\"parallel universe\",\"animals\",\"glass\",\"fantasy\"]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 48,
+    "candidatesTokenCount": 31,
+    "totalTokenCount": 399,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 48
+      }
+    ],
+    "thoughtsTokenCount": 320
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "OrfDaLf_G8eN_PUPjsnbqQE"
+}
