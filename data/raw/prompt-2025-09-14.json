@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"prompt\": \"A city where all gravity is inverted for one hour each day.\", \"tags\": [\"gravity\", \"city\", \"constraint\"]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 48,
+    "candidatesTokenCount": 29,
+    "totalTokenCount": 317,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 48
+      }
+    ],
+    "thoughtsTokenCount": 240
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "zFvGaMDmNMzFjrEPhvaMmAw"
+}
