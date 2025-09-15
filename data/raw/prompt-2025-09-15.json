@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"prompt\": \"All reflections suddenly show a different, slightly altered reality.\", \"tags\": [\"alternate reality\", \"perception\", \"mystery\", \"sci-fi\"]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 48,
+    "candidatesTokenCount": 33,
+    "totalTokenCount": 368,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 48
+      }
+    ],
+    "thoughtsTokenCount": 287
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "uavHaLC-E6udz7IP7KrrqAM"
+}
