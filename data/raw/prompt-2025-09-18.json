@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"prompt\": \"A clock that counts down to the next moment of genuine surprise.\",\"tags\": [\"object\", \"time\", \"emotion\", \"anticipation\", \"novelty\"]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 48,
+    "candidatesTokenCount": 37,
+    "totalTokenCount": 498,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 48
+      }
+    ],
+    "thoughtsTokenCount": 413
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "OqDLaJiQCa6pjrEPldyN4Ao"
+}
