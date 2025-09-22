@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"prompt\": \"A mirror that shows you yesterday's reflection.\",\"tags\": [\"object\",\"time\",\"reflection\",\"memory\",\"paradox\"]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 48,
+    "candidatesTokenCount": 29,
+    "totalTokenCount": 351,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 48
+      }
+    ],
+    "thoughtsTokenCount": 274
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "QObQaMyPG6KPjMcP6on2qQw"
+}
