@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"prompt\": \"A city where all shadows are sentient and communicate only through interpretive dance.\", \"tags\": [\"urban\", \"fantasy\", \"shadows\", \"dance\", \"communication\", \"sentient\"]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 48,
+    "candidatesTokenCount": 41,
+    "totalTokenCount": 245,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 48
+      }
+    ],
+    "thoughtsTokenCount": 156
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "ujfSaMXNN6Ko_uMPhcemsQU"
+}
