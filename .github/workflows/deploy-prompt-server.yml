@@ -1,0 +1,39 @@
+name: Deploy Prompt Server Worker
+
+on:
+  push:
+    paths:
+      - 'packages/prompt-server/**'
+      # - 'packages/shared/**'  # If you add shared code later
+    branches: [main]
+  workflow_dispatch:  # Allow manual deploys
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy TypeScript Worker
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'packages/prompt-server/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./packages/prompt-server
+        run: npm ci
+
+      - name: Type check
+        working-directory: ./packages/prompt-server
+        run: npx tsc --noEmit
+
+      - name: Deploy to Cloudflare Workers
+        working-directory: ./packages/prompt-server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler deploy

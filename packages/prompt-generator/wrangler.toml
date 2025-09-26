@@ -1,0 +1,16 @@
+name = "estrange-prompt-generator"
+main = "build/index.js"
+compatibility_date = "2025-09-26"
+
+[build]
+command = "cargo install -q worker-build && worker-build --release"
+
+[triggers]
+crons = ["0 6 * * *"]  # 6 AM UTC
+
+[[kv_namespaces]]
+binding = "PROMPTS"
+id = "03e170c4f4184b229f8875bd661a1d9b"
+
+[vars]
+PROMPTS_REPO = "kalley/estrange-prompts"

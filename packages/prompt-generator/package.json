@@ -1,0 +1,12 @@
+{
+	"name": "@estrange/prompt-generator",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"types": "wrangler types"
+	},
+	"devDependencies": {
+		"wrangler": "^4.40.2"
+	}
+}

@@ -1,0 +1,10 @@
+name = "estrange-prompt-server"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "PROMPTS"
+id = "03e170c4f4184b229f8875bd661a1d9b" # Same as generator worker
+
+[vars]
+ALLOWED_ORIGINS = "https://kalley.github.io"
