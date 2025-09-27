@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"prompt\": \"A library where books only become readable when placed upside down.\", \"tags\": [\"stimulus\", \"creative\", \"constraint\", \"library\", \"books\"]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 48,
+    "candidatesTokenCount": 35,
+    "totalTokenCount": 469,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 48
+      }
+    ],
+    "thoughtsTokenCount": 386
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "tH3XaMHENOmKqtsPyfKH-Aw"
+}
