@@ -1,4 +1,4 @@
-import { isChildNode, isHTMLElement } from "../dom/utils";
+import { isChildNode, isHTMLElement, isTextNode } from "../dom/utils";
 
 export const safeGetSelection = () => {
 	try {
@@ -30,14 +30,26 @@ export const setCaretBefore = (node: Node) => {
 	node.parentNode?.normalize();
 };
 
-export const getClosestBlock = (node: HTMLElement, root: HTMLElement) => {
+export const getClosestNonTextNode = (node: Node, root: HTMLElement) => {
+	let current: Node | null = node;
+	while (current && current !== root) {
+		if (!isTextNode(current)) {
+			return current;
+		}
+		current = current.parentNode;
+	}
+	return null;
+};
+
+export const getClosestBlock = (node: Node, root: HTMLElement) => {
 	let current: Node | null = node;
 	while (current && current !== root) {
 		if (
 			isHTMLElement(current) &&
 			(current.tagName.match(/^H[1-6]$/) ||
 				current.tagName === "DIV" ||
-				current.tagName === "LI")
+				current.tagName === "LI" ||
+				current.tagName === "P")
 		) {
 			return current;
 		}

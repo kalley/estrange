@@ -1,14 +1,26 @@
 import type { CursorManager } from "../dom/cursor";
 import type { History } from "../history/state-manager";
 
-export interface HandlerContext {
+export interface ActionContext {
 	cursorManager: CursorManager;
 	editor: HTMLElement;
 	getHistory: () => History;
 	setHistory: (history: History) => void;
 }
 
-export interface Handler {
-	canHandle: (e: KeyboardEvent, context: HandlerContext) => boolean;
-	handle: (e: KeyboardEvent, context: HandlerContext) => void;
-}
+export type EditorKey =
+	| "backspace"
+	| "delete"
+	| "enter"
+	| "tab"
+	| "escape"
+	| "arrowleft"
+	| "arrowright"
+	| "arrowup"
+	| "arrowdown"
+	| (string & {});
+
+export type Handler = (
+	event: KeyboardEvent,
+	context: ActionContext,
+) => HTMLElement | null;

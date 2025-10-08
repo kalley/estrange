@@ -1,5 +1,5 @@
 import { createTextWalker } from "../dom/walker";
-import { ZWS } from "../dom/zw-manager";
+import { ZWS } from "../dom/zw-utils";
 import {
 	type Block,
 	type HeadingBlock,
@@ -11,20 +11,25 @@ import {
 } from "../parsers/block-parser";
 import { astToDOM, parseInlinePatterns } from "../parsers/inline-parser";
 
-const applyInlineFormatting = (block: HTMLElement, includeZWS: boolean) => {
-	const walker = createTextWalker(block);
-	const textNodes: Text[] = [];
+export interface FormattingResult {
+	transformed: boolean;
+	newCursorPosition?: {
+		node: Text;
+		offset: number;
+	};
+}
 
-	while (walker.nextNode()) {
-		if (
-			walker.currentNode.textContent !== ZWS &&
-			walker.currentNode.textContent !== ""
-		) {
-			textNodes.push(walker.currentNode);
-		}
-	}
+export const applyInlineFormatting = (
+	block: HTMLElement,
+	includeZWS: boolean,
+): FormattingResult => {
+	const textNodes = createTextWalker(block);
 
-	for (const textNode of textNodes) {
+	let transformed = false;
+
+	// Transform each text node that has complete patterns
+	while (textNodes.nextNode()) {
+		const textNode = textNodes.currentNode;
 		const text = textNode.textContent || "";
 		if (!text) continue;
 
@@ -34,11 +39,43 @@ const applyInlineFormatting = (block: HTMLElement, includeZWS: boolean) => {
 
 		if (!needsFormatting) continue;
 
+		transformed = true;
 		const fragment = astToDOM(ast, includeZWS);
+
 		textNode.parentNode?.replaceChild(fragment, textNode);
 	}
 
+	if (!transformed) {
+		return { transformed: false };
+	}
+
 	block.normalize();
+
+	// Get all text nodes after transformation
+	const newWalker = createTextWalker(block);
+	let targetNode: Text | null = null;
+
+	while (newWalker.nextNode()) {
+		targetNode = newWalker.currentNode;
+
+		if (targetNode.parentNode !== block) {
+			targetNode = newWalker.nextNode();
+
+			if (targetNode?.parentNode === block) continue;
+		}
+	}
+
+	if (targetNode) {
+		return {
+			transformed: true,
+			newCursorPosition: {
+				node: targetNode,
+				offset: 1,
+			},
+		};
+	}
+
+	return { transformed: true };
 };
 
 const setContent = (
@@ -46,7 +83,7 @@ const setContent = (
 	content: string,
 	options: { includeZWS: boolean } = { includeZWS: false },
 ) => {
-	const text = content.trim();
+	const text = content.replaceAll(ZWS, "").trim();
 
 	if (!text) {
 		element.textContent = options.includeZWS ? ZWS : "";
@@ -130,7 +167,7 @@ type BlockRenderers = {
 	[K in Block["type"]]: (block: Block, options: RenderOptions) => HTMLElement;
 };
 
-const blockRenderers: BlockRenderers = {
+export const blockRenderers: BlockRenderers = {
 	heading: (block, renderOptions) =>
 		createHeading(block as HeadingBlock, renderOptions),
 	hr: (block: Block, options: RenderOptions) =>
@@ -145,7 +182,10 @@ const blockRenderers: BlockRenderers = {
 
 export const renderMarkdown = (
 	markdown: string,
-	{ includeZWS = false }: { includeZWS?: boolean } = {},
+	{
+		includeZWS = false,
+		preserveStructure = false,
+	}: { includeZWS?: boolean; preserveStructure?: boolean } = {},
 ): DocumentFragment => {
 	const fragment = document.createDocumentFragment();
 	if (!markdown.trim()) return fragment;
@@ -157,7 +197,7 @@ export const renderMarkdown = (
 	};
 
 	for (const line of lines) {
-		const block = parseBlockMarkdown(line);
+		const block = parseBlockMarkdown(line, { includeZWS, preserveStructure });
 
 		if (block) {
 			fragment.appendChild(blockRenderers[block.type](block, renderOptions));

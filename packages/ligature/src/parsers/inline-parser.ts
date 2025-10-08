@@ -1,15 +1,15 @@
-import { ZWS } from "../dom/zw-manager";
+import { ZWS } from "../dom/zw-utils";
 
-export type Node =
+export type InlineNode =
 	| { type: "text"; value: string }
-	| { type: "emphasis"; children: Node[] }
-	| { type: "strong"; children: Node[] }
-	| { type: "strikethrough"; children: Node[] }
+	| { type: "emphasis"; children: InlineNode[] }
+	| { type: "strong"; children: InlineNode[] }
+	| { type: "strikethrough"; children: InlineNode[] }
 	| { type: "code"; value: string };
 
 interface DelimiterInfo {
 	marker: string;
-	type: Node["type"] | "strongEmphasis";
+	type: InlineNode["type"] | "strongEmphasis";
 	priority: number;
 	canNest: boolean;
 }
@@ -17,7 +17,7 @@ interface DelimiterInfo {
 interface Span {
 	start: number;
 	end: number;
-	type: Node["type"];
+	type: InlineNode["type"];
 	markerLength: number;
 }
 
@@ -37,11 +37,13 @@ const DELIMITERS: DelimiterInfo[] = [
 	{ marker: "~~", type: "strikethrough", priority: 2, canNest: true },
 ];
 
+export const INLINE_MARKERS = DELIMITERS.map((d) => d.marker);
+
 const SORTED_DELIMITERS = DELIMITERS.sort(
 	(a, b) => b.marker.length - a.marker.length,
 );
 
-export const parseInlinePatterns = (text: string): Node[] => {
+export const parseInlinePatterns = (text: string): InlineNode[] => {
 	if (!text.trim()) return [{ type: "text", value: text }];
 
 	// Phase 1: Tokenize
@@ -337,7 +339,7 @@ function handleTripleDelimiter(
 
 function findStackIndex(
 	stack: StackEntry[],
-	type: Node["type"],
+	type: InlineNode["type"],
 	marker: string,
 ): number {
 	for (let i = stack.length - 1; i >= 0; i--) {
@@ -351,7 +353,7 @@ function findStackIndex(
 	return -1;
 }
 
-function spansToAST(text: string, spans: Span[]): Node[] {
+function spansToAST(text: string, spans: Span[]): InlineNode[] {
 	const resolvedSpans = resolveSpanConflicts(spans);
 	return buildAST(text, resolvedSpans, 0, text.length);
 }
@@ -388,8 +390,8 @@ function buildAST(
 	spans: Span[],
 	start: number,
 	end: number,
-): Node[] {
-	const nodes: Node[] = [];
+): InlineNode[] {
+	const nodes: InlineNode[] = [];
 	let currentPos = start;
 
 	// Find spans that start in this range, sorted by start position
@@ -403,7 +405,7 @@ function buildAST(
 		// Add text before this span
 		if (currentPos < span.start) {
 			const textValue = text.slice(currentPos, span.start);
-			nodes.push({ type: "text", value: textValue.trimStart() });
+			nodes.push({ type: "text", value: textValue });
 		}
 
 		const start = Math.max(span.start, currentPos);
@@ -435,7 +437,10 @@ function buildAST(
 	return nodes;
 }
 
-export function astToDOM(nodes: Node[], includeZWS: boolean): DocumentFragment {
+export function astToDOM(
+	nodes: InlineNode[],
+	includeZWS: boolean,
+): DocumentFragment {
 	const fragment = document.createDocumentFragment();
 
 	for (let i = 0; i < nodes.length; i++) {
@@ -443,11 +448,17 @@ export function astToDOM(nodes: Node[], includeZWS: boolean): DocumentFragment {
 
 		if (node.type === "text") {
 			if (node.value) {
-				fragment.appendChild(document.createTextNode(node.value));
+				const text = includeZWS
+					? `${ZWS}${node.value.replace(new RegExp(`^${ZWS}`), "")}`
+					: node.value;
+				fragment.appendChild(document.createTextNode(text));
 			}
 		} else if (node.type === "code") {
 			const codeEl = document.createElement("code");
-			codeEl.textContent = node.value;
+			const text = includeZWS
+				? `${ZWS}${node.value.replace(new RegExp(`^${ZWS}`), "")}`
+				: node.value;
+			codeEl.appendChild(document.createTextNode(text));
 			fragment.appendChild(codeEl);
 
 			// Add ZWS after code for cursor escape
@@ -469,6 +480,9 @@ export function astToDOM(nodes: Node[], includeZWS: boolean): DocumentFragment {
 			const element = document.createElement(tagName);
 
 			const childFragment = astToDOM(node.children, includeZWS);
+			if (includeZWS && !childFragment.textContent?.startsWith(ZWS)) {
+				element.appendChild(document.createTextNode(ZWS));
+			}
 			element.appendChild(childFragment);
 			fragment.appendChild(element);
 

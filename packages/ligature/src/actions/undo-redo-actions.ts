@@ -7,7 +7,7 @@ export const createUndoRedoActions = (
 	return {
 		undo: {
 			canHandle: (e) =>
-				(e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey,
+				(e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey ? 1 : 0,
 			handle: (e, context) => {
 				e.preventDefault();
 				const result = undoHistory(
@@ -23,7 +23,9 @@ export const createUndoRedoActions = (
 		redo: {
 			canHandle: (e) =>
 				(e.ctrlKey || e.metaKey) &&
-				((e.key === "z" && e.shiftKey) || e.key === "y"),
+				((e.key === "z" && e.shiftKey) || e.key === "y")
+					? 1
+					: 0,
 			handle: (e, context) => {
 				e.preventDefault();
 				const result = redoHistory(

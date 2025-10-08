@@ -3,18 +3,25 @@ export function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(
 	delay: number,
 ) {
 	let timeoutId: ReturnType<typeof setTimeout> | null = null;
+	let pendingArgs: Parameters<T> | null = null;
+	let pendingContext: ThisParameterType<T> | null = null;
 
 	const debounced = function (
 		this: ThisParameterType<T>,
 		...args: Parameters<T>
 	) {
+		pendingArgs = args;
+		pendingContext = this;
+
 		if (timeoutId) {
 			clearTimeout(timeoutId);
 		}
 
 		timeoutId = setTimeout(() => {
-			func.apply(this, args);
+			if (pendingArgs) func.apply(pendingContext, pendingArgs);
 			timeoutId = null;
+			pendingArgs = null;
+			pendingContext = null;
 		}, delay);
 	};
 
@@ -22,6 +29,18 @@ export function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(
 		if (timeoutId) {
 			clearTimeout(timeoutId);
 			timeoutId = null;
+			pendingArgs = null;
+			pendingContext = null;
+		}
+	};
+
+	debounced.flush = () => {
+		if (timeoutId && pendingArgs) {
+			clearTimeout(timeoutId);
+			func.apply(pendingContext, pendingArgs);
+			timeoutId = null;
+			pendingArgs = null;
+			pendingContext = null;
 		}
 	};
 

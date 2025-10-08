@@ -1,125 +1,70 @@
 import { createActionRegistry } from "../actions";
-import { createDefaultDeleteAction } from "../actions/delete-actions";
-import { createHeadingEnterAction } from "../actions/enter-actions";
+import { createDeleteHandler, normalizeBlock } from "../actions/delete-action";
+import { createPreventDefaultAction } from "../actions/prevent-default-action";
+import { createShiftArrowLeftAction } from "../actions/shift-leftarrow-action";
 import type { Handler } from "../actions/types";
-import { createUndoRedoActions } from "../actions/undo-redo-actions";
 import {
-	processBlock as blockProcessor,
+	processNode as blockProcessor,
 	createCursorManager,
+	getSelectionRange,
 } from "../dom/cursor";
-import { isNode } from "../dom/utils";
-import { createZWSManager } from "../dom/zw-manager";
+import { isHTMLElement, isTextNode } from "../dom/utils";
+import { ZWS } from "../dom/zw-utils";
 import { createHistory, type History } from "../history/state-manager";
+import { BLOCK_REGEXES } from "../parsers/block-parser";
+import { INLINE_MARKERS } from "../parsers/inline-parser";
 import { serializeToMarkdown } from "../parsers/serializer";
-import { getCachedPatterns } from "../performance/cache";
 import { debounce } from "../performance/debounce";
+import { normalizeInline, normalizeRootChild } from "./normalization";
 import { renderMarkdown } from "./renderer";
-import { getClosestBlock } from "./utils";
+import { getClosestBlock, getClosestNonTextNode } from "./utils";
 
-// Modified version of your createEditor with better cursor management
-export const createEditor = (element: HTMLElement, options = {}) => {
-	const config = {
-		cacheSize: 1000,
-		debounceMs: 60,
-		...options,
-	};
+export interface EditorOptions {
+	debounceMs?: number;
+	value?: string;
+}
 
+export const createEditor = ({
+	debounceMs = 60,
+	value: _value = "",
+}: EditorOptions = {}) => {
+	let element: HTMLElement;
 	let history = createHistory();
 	const patternCache = new Map();
 	const pendingProcess = new Set<Node>();
 	const actions = createActionRegistry();
-	const cursorManager = createCursorManager(); // Add cursor manager
-	const zwsManager = createZWSManager();
-
-	let isTyping = false;
-	let lastInputTime = 0;
-	// <-- NEW: guard to avoid re-entrant processing triggered by our own mutations
+	const cursorManager = createCursorManager();
 	let isProcessing = false;
-	// Small cap to avoid pathological repeated scheduling from the same run
 	const MAX_FOLLOWUP_PASSES = 6;
 
-	element.addEventListener("input", () => {
-		isTyping = true;
-		lastInputTime = Date.now();
-
-		// Clear the typing flag after a short delay
-		setTimeout(() => {
-			if (Date.now() - lastInputTime >= 150) {
-				isTyping = false;
-			}
-		}, 150);
-	});
-
+	// All your existing functions stay the same, but reference `element` directly
 	function processBlock(block: Node) {
-		// Use cursor-aware processing
-		blockProcessor(block, block === element, cursorManager);
-	}
-
-	function hasUnprocessedMarkdown(block: ChildNode) {
-		// Get text content but exclude text that's already inside formatted elements
-		const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, null);
-		let textToCheck = "";
-
-		while (walker.nextNode()) {
-			const node = walker.currentNode;
-			const parent = node.parentElement;
-
-			// Skip text inside already-formatted elements
-			if (parent && ["STRONG", "EM", "S"].includes(parent.tagName)) {
-				continue;
-			}
-
-			textToCheck += node.textContent || "";
-		}
-
-		if (!textToCheck) return false;
-
-		const patterns = getCachedPatterns(
-			textToCheck,
-			patternCache,
-			config.cacheSize,
-		);
-		return !!patterns && patterns.length > 0;
+		blockProcessor(block, block === element);
 	}
 
 	function processPendingNodes(nodes: Node[], followupCount = 0) {
-		if (isProcessing) return;
-		if (followupCount > MAX_FOLLOWUP_PASSES) return;
+		if (isProcessing || followupCount > MAX_FOLLOWUP_PASSES) return;
 
 		isProcessing = true;
 		try {
-			const processedBlocks = new Set<HTMLElement>();
-			let hasChanges = false;
-
 			for (const node of nodes) {
-				if (!(node instanceof HTMLElement)) continue;
+				const block = getClosestNonTextNode(node, element);
 
-				const block = getClosestBlock(node, element);
-				if (!block || processedBlocks.has(block)) continue;
-
-				processedBlocks.add(block);
-				const hadMarkdown = hasUnprocessedMarkdown(block);
+				if (!block) continue;
 
 				processBlock(block);
 
-				// If we had markdown and still do, we need another pass
-				if (hadMarkdown && hasUnprocessedMarkdown(block)) {
-					hasChanges = true;
-				}
-			}
+				// const selection = window.getSelection();
 
-			if (hasChanges) {
-				setTimeout(
-					() => processPendingNodes([...processedBlocks], followupCount + 1),
-					0,
-				);
+				// if (isHTMLElement(block) && selection) {
+				// 	normalizeBlock(block, selection);
+				// }
 			}
 		} finally {
 			isProcessing = false;
 		}
 	}
 
-	// Enhanced history state with better selection capture
 	const saveHistoryState = (
 		history: History,
 		editor: HTMLElement,
@@ -129,7 +74,7 @@ export const createEditor = (element: HTMLElement, options = {}) => {
 
 		const state = {
 			html: editor.innerHTML,
-			selection: cursorManager.captureSelectionState(editor), // Use better capture
+			selection: cursorManager.captureSelectionState(editor),
 			timestamp: Date.now(),
 			operation,
 		};
@@ -148,10 +93,11 @@ export const createEditor = (element: HTMLElement, options = {}) => {
 		};
 	};
 
-	// Rest of your editor setup...
 	const actionContext = {
 		cursorManager,
-		editor: element,
+		get editor() {
+			return element;
+		},
 		getHistory: () => history,
 		setHistory: (newHistory: History) => {
 			history = newHistory;
@@ -159,143 +105,241 @@ export const createEditor = (element: HTMLElement, options = {}) => {
 	};
 
 	function setupActions() {
-		actions.delete("delete");
-		actions.register("delete", createDefaultDeleteAction());
-		actions.register("heading-enter", createHeadingEnterAction());
-
-		const undoRedoActions = createUndoRedoActions(processBlock);
-		actions.register("undo", undoRedoActions.undo);
-		actions.register("redo", undoRedoActions.redo);
+		actions.register("backspace", createDeleteHandler());
+		actions.register("mod+u", createPreventDefaultAction());
+		actions.register("shift+arrowleft", createShiftArrowLeftAction());
 	}
 
-	setupActions();
+	let isSelectingText = false;
 
-	function handleKeydown(e: KeyboardEvent) {
-		// Add this at the beginning of your existing function
-		if (e.key === "ArrowRight" && !e.shiftKey) {
-			if (zwsManager.isAtEndOfFormattedElement()) {
-				e.preventDefault();
-				zwsManager.escapeCursor();
-				return;
-			}
+	function handleKeydown(event: KeyboardEvent) {
+		const shouldCustomHandle = actions.canHandle(event);
+
+		isSelectingText = event.key.startsWith("Arrow") && event.shiftKey;
+
+		if (shouldCustomHandle) {
+			withObserverPaused(() => {
+				actions.handle(event, actionContext);
+			});
 		}
 
-		for (const [_name, action] of actions.entries()) {
-			if (action.canHandle(e, actionContext)) {
-				const result = action.handle(e, actionContext);
-				if (result.preventDefault) {
-					e.preventDefault();
+		// Always normalize after destructive keys
+		if (isDestructiveKey(event.key)) {
+			requestAnimationFrame(() => {
+				const range = getSelectionRange();
+				if (range) {
+					const block = getClosestBlock(range.commonAncestorContainer, element);
+					const selection = window.getSelection();
+					if (block && selection) {
+						normalizeBlock(block, selection);
+					}
 				}
-				if (result.shouldProcess) {
-					const target = isNode(e.target) ? e.target : null;
-					if (!target) return;
-					setTimeout(() => {
-						processPendingNodes([target]);
-					}, 0);
-				}
-				return;
-			}
+			});
 		}
 
-		if (e.key === "Enter") {
+		if (event.key === "Enter") {
 			history = saveHistoryState(history, element, "enter");
 		}
 	}
 
-	element.addEventListener("keydown", handleKeydown);
+	const isDestructiveKey = (key: string): boolean => {
+		return ["Backspace", "Delete", "Enter"].includes(key);
+	};
+
+	let isAdjustingCursor = false;
+
+	function handleSelectionChange() {
+		if (isAdjustingCursor || isSelectingText) {
+			isSelectingText = false;
+			return;
+		}
+
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0) return;
+
+		const range = selection.getRangeAt(0);
+
+		// Only adjust collapsed cursors - leave selections alone
+		if (!range.collapsed) return;
+
+		if (isCursorBeforeBlockStartZWS(range)) {
+			isAdjustingCursor = true;
+
+			try {
+				const textNode = range.startContainer as Text;
+				const newRange = document.createRange();
+				newRange.setStart(textNode, 1);
+				newRange.collapse(true);
+
+				selection.removeAllRanges();
+				selection.addRange(newRange);
+			} finally {
+				isAdjustingCursor = false;
+			}
+		}
+	}
+
+	const isCursorBeforeBlockStartZWS = (range: Range): boolean => {
+		// Only handle collapsed cursor
+		if (!range.collapsed) return false;
+
+		if (range.startOffset !== 0) return false;
+
+		const container = range.startContainer;
+		if (!isTextNode(container)) return false;
+
+		const textNode = container;
+		if (!textNode.textContent?.startsWith(ZWS)) return false;
+
+		const block = getClosestBlock(textNode, element);
+		return !!block && isFirstTextNodeInBlock(textNode, block);
+	};
+
+	const isFirstTextNodeInBlock = (
+		textNode: Text,
+		block: HTMLElement,
+	): boolean => {
+		const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, null);
+		return walker.nextNode() === textNode;
+	};
 
 	const debouncedProcess = debounce((nodes: Node[]) => {
 		processPendingNodes(nodes);
-	}, config.debounceMs);
-
-	const mo = new MutationObserver((mutations) => {
-		if (history.isUndoRedo) return;
-		// if we're already in the middle of processing, ignore these mutations
-		if (isProcessing) return;
-
-		if (isTyping && Date.now() - lastInputTime < 100) {
-			// Only process if there are clear markdown patterns
-			const hasMarkdownPatterns = mutations.some((mut) => {
-				if (mut.type === "characterData" && mut.target.textContent) {
-					const text = mut.target.textContent;
-					// Look for clear markdown indicators
-					return (
-						/[*_`~#-]/.test(text) &&
-						(text.includes("**") ||
-							text.includes("__") ||
-							text.includes("*") ||
-							text.includes("_") ||
-							text.includes("`") ||
-							text.includes("~~") ||
-							text.match(/^#+\s/) ||
-							text.match(/^[-*]\s/))
-					);
-				}
-				return false;
-			});
-
-			if (!hasMarkdownPatterns) return;
-		}
-
-		mo.disconnect();
-		for (const mut of mutations) {
-			if (mut.type === "characterData") {
-				if (mut.target.parentNode) {
-					pendingProcess.add(mut.target.parentNode);
-				}
-			} else if (mut.type === "childList") {
-				if (mut.target) pendingProcess.add(mut.target);
-				for (const n of mut.addedNodes) pendingProcess.add(n);
-				for (const _n of mut.removedNodes) pendingProcess.add(mut.target);
-			}
-		}
-		debouncedProcess([...pendingProcess]);
-		pendingProcess.clear();
 		mo.observe(element, {
 			subtree: true,
 			characterData: true,
 			childList: true,
 			characterDataOldValue: true,
 		});
+	}, debounceMs);
+
+	const mo = new MutationObserver((mutations) => {
+		if (history.isUndoRedo || isProcessing) return;
+
+		for (const mutation of mutations) {
+			for (const node of mutation.addedNodes) {
+				if (node.parentNode === element) {
+					let normalized: Node | null = null;
+
+					withObserverPaused(() => {
+						normalized = normalizeRootChild(node);
+					});
+
+					if (normalized) return;
+				} else if (isHTMLElement(node) && ["B", "I"].includes(node.nodeName)) {
+					let normalized: Node | null = null;
+
+					withObserverPaused(() => {
+						normalized = normalizeInline(node);
+					});
+
+					if (normalized) return;
+				}
+			}
+		}
+
+		const hasMarkdownPatterns = mutations.some((mut) => {
+			if (mut.type !== "characterData" || !mut.target.textContent) return false;
+
+			const text = mut.target.textContent.replace(new RegExp(`^${ZWS}`), "");
+
+			return (
+				INLINE_MARKERS.some((marker) => text.includes(marker)) ||
+				BLOCK_REGEXES.some((regex) => regex.test(text))
+			);
+		});
+
+		if (!hasMarkdownPatterns) return;
+		mo.disconnect();
+
+		for (const mut of mutations) {
+			if (mut.type === "characterData") {
+				pendingProcess.add(mut.target);
+			}
+		}
+		debouncedProcess([...pendingProcess]);
+		pendingProcess.clear();
 	});
 
-	mo.observe(element, {
-		subtree: true,
-		characterData: true,
-		childList: true,
-		characterDataOldValue: true,
-	});
+	function withObserverPaused<T>(fn: () => T): T {
+		mo.disconnect();
+		try {
+			return fn();
+		} finally {
+			requestAnimationFrame(() => {
+				mo.observe(element, {
+					subtree: true,
+					characterData: true,
+					childList: true,
+					characterDataOldValue: true,
+				});
+			});
+		}
+	}
 
 	return {
-		element,
+		attach(el: HTMLElement) {
+			element = el;
+
+			if (!element.hasAttribute("contenteditable")) {
+				element.setAttribute("contenteditable", "true");
+			}
+
+			setupActions();
+
+			element.addEventListener("keydown", handleKeydown);
+			document.addEventListener("selectionchange", handleSelectionChange);
+
+			mo.observe(element, {
+				subtree: true,
+				characterData: true,
+				childList: true,
+				characterDataOldValue: true,
+			});
+
+			return this;
+		},
+
 		getMarkdown: () => serializeToMarkdown(element),
+
 		setContent: (content: string) => {
 			if (!content.trim()) {
 				element.innerHTML = "";
 				return;
 			}
 
-			// Suppress mutation observer while we do synchronous processing
 			if (isProcessing) return;
-			isProcessing = true;
 
-			try {
-				const fragment = renderMarkdown(content, { includeZWS: true });
+			withObserverPaused(() => {
+				isProcessing = true;
 
-				element.innerHTML = "";
-				element.appendChild(fragment);
-			} finally {
-				isProcessing = false;
-			}
+				try {
+					const fragment = renderMarkdown(content, {
+						includeZWS: true,
+						preserveStructure: true,
+					});
+
+					element.innerHTML = "";
+					element.appendChild(fragment);
+				} finally {
+					setTimeout(() => {
+						isProcessing = false;
+					}, 0);
+				}
+			});
 		},
+
 		setDeleteMode: () => setupActions(),
+
 		registerAction: (name: string, action: Handler) =>
 			actions.register(name, action),
+
 		destroy: () => {
 			mo.disconnect();
 			patternCache.clear();
 			pendingProcess.clear();
 			element.removeEventListener("keydown", handleKeydown);
+			document.removeEventListener("selectionchange", handleSelectionChange);
 		},
 	};
 };

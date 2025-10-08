@@ -1,4 +1,4 @@
-import { ZWS } from "../dom/zw-manager";
+import { ZWS } from "../dom/zw-utils";
 
 export interface HeadingBlock {
 	type: "heading";
@@ -36,11 +36,14 @@ export type Block =
 const PARSERS = [
 	{
 		name: "heading",
-		regex: /^\s*(#{1,6})\s+(.*)$/,
-		handler: (match: RegExpMatchArray): HeadingBlock => ({
+		regex: /^\s*(#{1,6})\s+(.*)?$/,
+		handler: (match: RegExpMatchArray, includeZWS: boolean): HeadingBlock => ({
 			type: "heading",
 			level: match[1].length,
-			content: (match[2].trim() || ZWS).replace(/\s+#*$/, ""),
+			content: (match[2]?.trim() || (includeZWS ? ZWS : "")).replace(
+				/\s+#*$/,
+				"",
+			),
 		}),
 	},
 	{
@@ -51,27 +54,58 @@ const PARSERS = [
 	{
 		name: "ul",
 		regex: /^\s*([-*+])\s+(.*)$/,
-		handler: (match: RegExpMatchArray): UnorderedListBlock => ({
+		handler: (
+			match: RegExpMatchArray,
+			includeZWS: boolean,
+		): UnorderedListBlock => ({
 			type: "ul",
-			content: match[2] || ZWS,
+			content: match[2].trim() || (includeZWS ? ZWS : ""),
 		}),
 	},
 	{
 		name: "ol",
 		regex: /^\s*(\d+)([.)])\s+(.*)$/,
-		handler: (match: RegExpMatchArray): OrderListBlock => ({
+		handler: (
+			match: RegExpMatchArray,
+			includeZWS: boolean,
+		): OrderListBlock => ({
 			type: "ol",
 			start: parseInt(match[1], 10),
-			content: match[3] || ZWS,
+			content: match[3].trim() || (includeZWS ? ZWS : ""),
 		}),
 	},
 ];
 
-export const parseBlockMarkdown = (text: string) => {
+export const BLOCK_REGEXES = PARSERS.map((p) => p.regex);
+
+export const parseBlockMarkdown = (
+	text: string,
+	options: { includeZWS?: boolean; preserveStructure?: boolean } = {},
+) => {
 	if (!text.trim()) return null;
+
+	const cleanText = text.replaceAll(ZWS, "");
+
 	for (const parser of PARSERS) {
-		const match = text.match(parser.regex);
-		if (match) return parser.handler(match);
+		const match = cleanText.match(parser.regex);
+		if (match) {
+			const block = parser.handler(match, !!options.includeZWS);
+
+			// Check if block has empty content and we're not preserving structure
+			if (!!options.preserveStructure || !isEmptyBlock(block)) {
+				return block;
+			}
+		}
 	}
-	return { type: "p", content: text } as const;
+
+	// Paragraph fallback - trim the content
+	const trimmedContent = cleanText.trim();
+	return trimmedContent
+		? ({ type: "p", content: trimmedContent } as const)
+		: null;
+};
+
+const isEmptyBlock = (block: Block): boolean => {
+	if (block.type === "hr") return false;
+	return !block.content.trim();
 };

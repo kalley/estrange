@@ -5,7 +5,7 @@ export const serializeToMarkdown = (root: HTMLElement) => {
 
 	root.childNodes.forEach((block) => {
 		if (isTextNode(block)) {
-			lines.push(inlineNodeToMarkdown(block));
+			if (block.textContent?.trim()) lines.push(inlineNodeToMarkdown(block));
 			return;
 		}
 
@@ -29,6 +29,9 @@ export const serializeToMarkdown = (root: HTMLElement) => {
 			lines.push("");
 		} else if (block.tagName === "LI") {
 			lines.push(`- ${inlineNodeToMarkdown(block)}`);
+		} else if (block.tagName === "HR") {
+			lines.push("----");
+			lines.push("");
 		} else {
 			lines.push(inlineNodeToMarkdown(block));
 			lines.push("");
@@ -41,7 +44,7 @@ const inlineNodeToMarkdown = (node: Node): string => {
 	if (!node) return "";
 	if (isTextNode(node)) {
 		return (node.nodeValue || "")
-			.replace(/\u200B/g, "")
+			.replace(/[\u200B\n]/g, "")
 			.replace(/\u00a0/g, " "); // Strip ZWS
 	}
 	if (isHTMLElement(node)) {

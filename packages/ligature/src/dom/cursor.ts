@@ -1,13 +1,133 @@
+import { applyInlineFormatting, blockRenderers } from "../core/renderer";
 import { getNodeFromPath, getNodePath } from "../core/utils";
-import { parseBlockMarkdown } from "../parsers/block-parser";
-import {
-	astToDOM,
-	type Node as InlineNode,
-	parseInlinePatterns,
-} from "../parsers/inline-parser";
+import { type Block, parseBlockMarkdown } from "../parsers/block-parser";
 import { isHTMLElement, isTextNode } from "./utils";
-import { createTextWalker } from "./walker";
-import { ZWS } from "./zw-manager";
+import { createTextWalker, findLastTextNode } from "./walker";
+import { ZWS } from "./zw-utils";
+
+type SelectionRestore = (delta?: number) => void;
+
+interface CapturedSelection {
+	startOffset: number;
+	endOffset: number;
+	isCollapsed: boolean;
+}
+
+/**
+ * Capture selection relative to the block, ignoring ZWS.
+ */
+export const captureSelectionForBlock = (
+	block: HTMLElement,
+): SelectionRestore | null => {
+	const selection = window.getSelection();
+	if (!selection?.rangeCount) return null;
+
+	const range = selection.getRangeAt(0);
+	if (
+		!block.contains(range.startContainer) ||
+		!block.contains(range.endContainer)
+	) {
+		return null;
+	}
+
+	// Helper to compute offset ignoring ZWS
+	const getOffsetInBlock = (container: Node, containerOffset: number) => {
+		let offset = 0;
+		const walker = createTextWalker(block);
+		let node: Text | null = walker.nextNode();
+
+		while (node) {
+			if (node === container) {
+				const text = node.textContent || "";
+				const visibleOffset = Math.min(containerOffset, text.length);
+				const zwsCount = text.slice(0, visibleOffset).split(ZWS).length - 1;
+				return offset + visibleOffset - zwsCount;
+			} else {
+				const text = node.textContent || "";
+				const visibleLength = text.split(ZWS).join("").length;
+				offset += visibleLength;
+			}
+			node = walker.nextNode();
+		}
+		return offset;
+	};
+
+	const captured: CapturedSelection = {
+		startOffset: getOffsetInBlock(range.startContainer, range.startOffset),
+		endOffset: getOffsetInBlock(range.endContainer, range.endOffset),
+		isCollapsed: range.collapsed,
+	};
+
+	// Restore function with optional delta adjustment
+	return (delta: number = 0) => {
+		// Adjust offsets based on character count change
+		const targetStart = Math.max(0, captured.startOffset - delta);
+		const targetEnd = Math.max(0, captured.endOffset - delta);
+
+		let cumulative = 0;
+		const walker = createTextWalker(block);
+		let node: Text | null = walker.nextNode();
+
+		let startNode: Text | null = null;
+		let startOffset = 0;
+		let endNode: Text | null = null;
+		let endOffset = 0;
+
+		while (node) {
+			const text = node.textContent || "";
+			const visibleLength = text.split(ZWS).join("").length;
+
+			// Start node
+			if (!startNode && targetStart <= cumulative + visibleLength) {
+				startNode = node;
+				startOffset = targetStart - cumulative;
+			}
+
+			// End node
+			if (!endNode && targetEnd <= cumulative + visibleLength) {
+				endNode = node;
+				endOffset = targetEnd - cumulative;
+			}
+
+			if (startNode && endNode) break;
+			cumulative += visibleLength;
+			node = walker.nextNode();
+		}
+
+		console.log({
+			startNode,
+			endNode,
+			startOffset,
+			endOffset,
+			cumulative,
+			delta,
+			targetStart,
+			targetEnd,
+		});
+
+		if (startNode && endNode) {
+			// Map the visible offset back to actual offset in text node (accounting for ZWS)
+			const mapOffset = (node: Text, visibleOffset: number) => {
+				let offset = 0;
+				let count = 0;
+				for (const char of node.textContent || "") {
+					if (char !== ZWS) count++;
+					offset++;
+					if (count === visibleOffset) break;
+				}
+				return offset;
+			};
+
+			const range2 = document.createRange();
+			range2.setStart(startNode, mapOffset(startNode, startOffset));
+			range2.setEnd(endNode, mapOffset(endNode, endOffset));
+
+			const sel = window.getSelection();
+			sel?.removeAllRanges();
+			sel?.addRange(range2);
+		}
+	};
+};
 
 export interface SelectionState {
 	startPath: number[];
@@ -108,52 +228,16 @@ export const createCursorManager = () => {
 		}
 
 		// Strategy 2: Find by text content and parent context
-		if (selectionState.isCollapsed && selectionState.surroundingText) {
-			const restored = restoreByTextContext(editor, selectionState);
-			if (restored) return true;
-		}
-
-		// Strategy 3: Find similar elements by tag and approximate position
-		if (selectionState.startParentTag) {
+		if (
+			(selectionState.isCollapsed && selectionState.surroundingText) ||
+			selectionState.startParentTag
+		) {
 			const restored = restoreByElementContext(editor, selectionState);
 			if (restored) return true;
 		}
 
 		// Fallback: Focus the editor
 		editor.focus();
-		return false;
-	};
-
-	const restoreByTextContext = (
-		editor: HTMLElement,
-		selectionState: SelectionState,
-	) => {
-		const { before = "", after = "" } = selectionState.surroundingText ?? {};
-		const searchText = before + after;
-
-		// Find text nodes containing our context
-		const walker = createTextWalker(editor);
-
-		let node = walker.nextNode();
-		while (node) {
-			const text = node.textContent || "";
-			const contextIndex = text.indexOf(searchText);
-
-			if (contextIndex !== -1) {
-				try {
-					const range = document.createRange();
-					const offset = contextIndex + before.length;
-					range.setStart(node, offset);
-					range.collapse(true);
-
-					const sel = window.getSelection();
-					sel?.removeAllRanges();
-					sel?.addRange(range);
-					return true;
-				} catch (_e) {}
-			}
-			node = walker.nextNode();
-		}
 		return false;
 	};
 
@@ -271,416 +355,226 @@ export const createCursorManager = () => {
 		}
 	};
 
+	const captureInElement = (element: HTMLElement) => {
+		const selection = window.getSelection();
+		if (!selection?.rangeCount) return null;
+
+		const range = selection.getRangeAt(0);
+		if (!element.contains(range.startContainer)) return null;
+
+		// Calculate text offset from the beginning of the element
+		const textOffset = getTextOffsetInElement(
+			element,
+			range.startContainer,
+			range.startOffset,
+		);
+
+		return {
+			element,
+			textOffset,
+			originalText: element.textContent || "",
+		};
+	};
+
+	const restoreInElement = (capture: {
+		element: HTMLElement;
+		textOffset: number;
+	}) => {
+		const { element, textOffset } = capture;
+
+		// Find the text node and offset that corresponds to our text offset
+		const walker = createTextWalker(element);
+		let currentOffset = 0;
+		let node = walker.nextNode();
+
+		while (node) {
+			const nodeLength = (node.textContent || "").length;
+
+			if (textOffset <= currentOffset + nodeLength) {
+				const nodeOffset = textOffset - currentOffset;
+				restoreToNode(node, nodeOffset);
+				return true;
+			}
+
+			currentOffset += nodeLength;
+			node = walker.nextNode();
+		}
+
+		return false;
+	};
+
+	const getTextOffsetInElement = (
+		element: HTMLElement,
+		container: Node,
+		offset: number,
+	): number => {
+		const walker = createTextWalker(element);
+		let totalOffset = 0;
+		let node = walker.nextNode();
+
+		while (node && node !== container) {
+			totalOffset += (node.textContent || "").length;
+			node = walker.nextNode();
+		}
+
+		return totalOffset + offset;
+	};
+
 	return {
 		captureSelectionState,
 		restoreSelectionState,
 		captureIfInsideNode,
 		restoreToNode,
+		captureInElement,
+		restoreInElement,
 	};
 };
 
 export type CursorManager = ReturnType<typeof createCursorManager>;
 
-// Enhanced block processing that preserves cursor position
-export const processBlock = (
-	block: Node,
-	isRoot: boolean,
-	cursorManager: CursorManager,
-) => {
-	if (!isHTMLElement(block)) return;
+const shouldProcessAsBlock = (element: HTMLElement) => {
+	return (
+		element.tagName === "P" ||
+		element.tagName === "OL" ||
+		element.tagName === "UL" ||
+		(element.tagName.startsWith("H") && element.tagName.length === 2)
+	);
+};
 
-	if (block.tagName === "UL" || block.tagName === "OL") {
-		[...block.querySelectorAll("li")].forEach((li) => {
-			applyInlineFormatting(li, cursorManager);
+// Enhanced block processing that preserves cursor position
+export const processNode = (node: Node, isRoot: boolean) => {
+	if (!isHTMLElement(node)) return;
+
+	// Handle lists - just apply inline formatting to list items
+	if (node.tagName === "UL" || node.tagName === "OL") {
+		[...node.querySelectorAll("li")].forEach((li) => {
+			applyInlineFormattingWithCursor(li, true);
 		});
 		return;
 	}
 
-	if (
-		block.tagName === "DIV" ||
-		block.tagName.match(/^H[1-6]$/) ||
-		block.tagName === "LI" ||
-		isRoot
-	) {
-		const text = block.textContent || "";
+	// Handle block-level elements that might need conversion
+	if (shouldProcessAsBlock(node) || isRoot) {
+		const text = node.textContent?.replaceAll(ZWS, "") || "";
+		const parsed = parseBlockMarkdown(text, {
+			includeZWS: true,
+			preserveStructure: true,
+		});
 
-		if (block.tagName === "DIV" || isRoot) {
-			const parsed = parseBlockMarkdown(text);
-			console.log({ text, parsed });
-			if (parsed) {
-				// Capture selection, try incremental first
-				const selection = window.getSelection();
-				const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
-				const cursor = range?.startContainer
-					? cursorManager.captureIfInsideNode(range.startContainer)
-					: null;
-
-				let newElement!: HTMLElement;
-				if (parsed.type === "heading") {
-					newElement = document.createElement(`h${parsed.level}`);
-					newElement.textContent = parsed.content || ZWS;
-				} else if (parsed.type === "ul") {
-					newElement = document.createElement("ul");
-					const li = document.createElement("li");
-					li.textContent = parsed.content || ZWS;
-					newElement.appendChild(li);
-				} else if (parsed.type === "ol") {
-					newElement = document.createElement("ol");
-					if (parsed.start && parsed.start > 1) {
-						newElement.setAttribute("start", parsed.start.toString());
-					}
-					const li = document.createElement("li");
-					li.textContent = parsed.content || ZWS;
-					newElement.appendChild(li);
-				}
-
-				if (newElement) {
-					if (isRoot) {
-						// Special handling for root: replace content, not the element itself
-						block.innerHTML = "";
-						block.appendChild(newElement);
-					} else if (block.parentNode && block.parentNode !== document.body) {
-						// Normal case: replace the block element
-						block.parentNode.replaceChild(newElement, block);
-					}
-
-					const targetElement =
-						newElement.tagName === "UL" || newElement.tagName === "OL"
-							? newElement.querySelector("li")
-							: newElement;
-					const textNode = targetElement?.firstChild;
-
-					// Try incremental cursor restore if we had one
-					if (cursor && textNode?.nodeType === Node.TEXT_NODE) {
-						cursorManager.restoreToNode(textNode as Text, cursor.offset);
-					} else {
-						// Fall back to full restore if needed
-						const state = cursorManager.captureSelectionState(block);
-						cursorManager.restoreSelectionState(newElement, state);
-					}
-
-					if (targetElement) {
-						applyInlineFormatting(targetElement, cursorManager);
-					}
-					return;
-				}
-			}
+		if (parsed && (isRoot || needsToConvert(node, parsed))) {
+			convertBlockElement(node, parsed, isRoot);
+		} else {
+			// Just apply inline formatting
+			applyInlineFormattingWithCursor(node, true);
 		}
-
-		// Apply inline formatting to any block (including root)
-		applyInlineFormatting(block, cursorManager);
+	} else {
+		// Just apply inline formatting
+		applyInlineFormattingWithCursor(node, true);
 	}
 };
 
-// Inline formatting that's much more cursor-aware
-export const applyInlineFormatting = (
+const needsToConvert = (node: HTMLElement, parsed: Block) => {
+	return parsed.type !== node.tagName.toLowerCase();
+};
+
+const convertBlockElement = (
+	element: HTMLElement,
+	parsed: Block,
+	isRoot: boolean,
+) => {
+	// Use your block renderers!
+	const renderOptions = { includeZWS: true, currentList: null };
+	const newElement = blockRenderers[parsed.type](parsed, renderOptions);
+
+	if (isRoot) {
+		element.innerHTML = "";
+		element.appendChild(newElement);
+	} else {
+		// Replace the element
+		element.replaceWith(newElement);
+	}
+};
+
+export const applyInlineFormattingWithCursor = (
 	block: HTMLElement,
-	cursorManager: CursorManager,
+	includeZWS: boolean,
 ) => {
-	const walker = createTextWalker(block);
-	const textNodes: Text[] = [];
-
-	while (walker.nextNode()) {
-		if (walker.currentNode.textContent !== ZWS) {
-			textNodes.push(walker.currentNode);
-		}
+	const selection = window.getSelection();
+	if (!selection?.rangeCount) {
+		applyInlineFormatting(block, includeZWS);
+		return;
 	}
 
-	for (const textNode of textNodes) {
-		const text = textNode.textContent || "";
-		if (!text) continue;
+	const range = selection.getRangeAt(0);
 
-		const cursor = cursorManager.captureIfInsideNode(textNode);
-		const ast = parseInlinePatterns(text);
-		const needsFormatting =
-			ast.length > 1 ||
-			ast.some(
-				(node) => node.type !== "text", // Multiple nodes means there's formatting
+	// Only handle typing scenario (collapsed cursor in the block)
+	if (!range.collapsed || !block.contains(range.startContainer)) {
+		applyInlineFormatting(block, includeZWS);
+		return;
+	}
+
+	const result = applyInlineFormatting(block, includeZWS);
+
+	// Restore cursor if transformation happened
+	if (result.newCursorPosition) {
+		try {
+			const newRange = document.createRange();
+			newRange.setStart(
+				result.newCursorPosition.node,
+				result.newCursorPosition.offset,
 			);
-
-		if (!needsFormatting) continue;
-
-		if (cursor) {
-			const parent = textNode.parentNode;
-			const originalOffset = cursor.offset;
-			if (!parent) continue;
-
-			const originalIndex = [...parent.childNodes].indexOf(textNode);
-
-			const fragment = astToDOM(ast, true);
-			parent.replaceChild(fragment, textNode);
-
-			const cursorPosition = findCursorPositionInAST(
-				ast,
-				originalOffset,
-				text,
-				originalIndex,
-			);
-
-			if (cursorPosition) {
-				// Find the actual DOM node that corresponds to our AST position
-				const targetNode = findTargetNodeInDOM(parent, cursorPosition);
-
-				if (isTextNode(targetNode?.node)) {
-					cursorManager.restoreToNode(targetNode.node, targetNode.offset);
-				} else {
-					// Fallback: place cursor at the end of the parent
-					const lastTextNode = getLastTextNodeIn(parent);
-					if (lastTextNode) {
-						cursorManager.restoreToNode(
-							lastTextNode,
-							lastTextNode.textContent?.length || 0,
-						);
-					}
-				}
-			} else {
-				// No specific position found, place at end
-				const lastTextNode = getLastTextNodeIn(parent);
-				if (lastTextNode) {
-					cursorManager.restoreToNode(
-						lastTextNode,
-						lastTextNode.textContent?.length || 0,
-					);
-				}
-			}
-		} else {
-			const fragment = astToDOM(ast, true);
-			textNode.parentNode?.replaceChild(fragment, textNode);
+			newRange.collapse(true);
+			selection.removeAllRanges();
+			selection.addRange(newRange);
+		} catch (e) {
+			console.warn("Failed to restore cursor:", e);
 		}
 	}
-
-	block.normalize();
+	// If transformed but no position returned, cursor stays where it fell
+	// If not transformed, cursor never moved
 };
 
-const findCursorPositionInAST = (
-	ast: InlineNode[],
-	originalOffset: number,
-	originalText: string,
-	originalIndex: number,
-) => {
-	let currentOffset = 0;
-
-	for (let nodeIndex = 0; nodeIndex < ast.length; nodeIndex++) {
-		const node = ast[nodeIndex];
-
-		if (node.type === "text") {
-			const nodeLength = node.value.length;
-
-			if (originalOffset <= currentOffset + nodeLength) {
-				return {
-					nodeIndex: originalIndex + nodeIndex,
-					type: "text",
-					offset: originalOffset - currentOffset,
-					isInsideFormatting: false,
-					originalOffset,
-				} as const;
-			}
-			currentOffset += nodeLength;
-		} else {
-			// For formatted nodes, we need to check if cursor is inside
-			const nodeContent = getNodeTextContent(node);
-			const nodeLength = nodeContent.length;
-
-			const wasJustCompleted = checkIfFormattingJustCompleted(
-				node,
-				originalOffset,
-				currentOffset,
-				originalText,
-			);
-
-			if (wasJustCompleted) {
-				// Place cursor AFTER this formatted element
-				return {
-					nodeIndex: originalIndex + nodeIndex,
-					type: "after_formatting",
-					formattingType: node.type,
-					offset: 0, // Will be placed after the element
-					isInsideFormatting: false,
-					originalOffset,
-				};
-			}
-
-			if (originalOffset <= currentOffset + nodeLength) {
-				// Cursor is inside this formatted node
-				return {
-					nodeIndex: originalIndex + nodeIndex,
-					type: node.type,
-					offset: originalOffset - currentOffset,
-					isInsideFormatting: true,
-					originalOffset,
-				} as const;
-			}
-			currentOffset += nodeLength;
-		}
-	}
-
-	// Cursor is at the very end
-	return {
-		nodeIndex: ast.length - 1,
-		type: "end",
-		offset: 0,
-		isInsideFormatting: false,
-		originalOffset,
-	} as const;
+export const getSelectionRange = (): Range | null => {
+	const selection = window.getSelection();
+	return selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
 };
 
-// Helper to get text content from an AST node recursively
-const getNodeTextContent = (node: InlineNode): string => {
-	if (node.type === "text" || node.type === "code") {
-		return node.value;
+export const moveCursorToEnd = (element: HTMLElement): void => {
+	const range = document.createRange();
+	const selection = window.getSelection();
+	const lastTextNode = findLastTextNode(element);
+	if (lastTextNode) {
+		range.setStart(lastTextNode, lastTextNode.textContent?.length ?? 0);
+	} else {
+		range.setStart(element, element.childNodes.length);
 	}
-
-	if (node.children) {
-		return node.children.map(getNodeTextContent).join("");
-	}
-
-	return "";
+	range.collapse(true);
+	selection?.removeAllRanges();
+	selection?.addRange(range);
 };
 
-// Helper to find the actual DOM node based on our AST position
-const findTargetNodeInDOM = (
-	parent: ParentNode,
-	cursorPosition: {
-		nodeIndex: number;
-		offset: number;
-		type: string;
-		isInsideFormatting: boolean;
-		originalOffset: number;
-	},
-) => {
-	// Get all the new text nodes in order
-	const textNodes: Text[] = [];
-	const walker = createTextWalker(parent);
-
-	let node = walker.nextNode();
-	while (node) {
-		if (isTextNode(node)) {
-			textNodes.push(node);
-		}
-		node = walker.nextNode();
-	}
-
-	if (cursorPosition.type === "after_formatting") {
-		// Find the formatting element in the DOM corresponding to the AST node
-		const formattingNode = parent.childNodes[cursorPosition.nodeIndex];
-		if (!formattingNode) return null;
-
-		// Cursor should go into the first text node after this formatting node
-		let nextNode = formattingNode.nextSibling;
-		while (nextNode && !isTextNode(nextNode)) {
-			nextNode = nextNode.nextSibling;
-		}
-
-		if (nextNode) {
-			nextNode.textContent = `${ZWS}${nextNode.textContent}`;
-			return { node: nextNode, offset: 1 };
-		}
-
-		// Fallback: end of parent
-		const lastTextNode = getLastTextNodeIn(parent);
-		return {
-			node: lastTextNode,
-			offset: lastTextNode?.textContent?.length ?? 0,
-		};
-	}
-
-	// Handle regular text positioning
-	if (cursorPosition.nodeIndex < textNodes.length) {
-		const targetNode = textNodes[cursorPosition.nodeIndex];
-
-		return {
-			node: targetNode,
-			offset: Math.min(
-				cursorPosition.offset,
-				targetNode.textContent?.length || 0,
-			),
-		};
-	}
-
-	// Fallback to last text node
-	if (textNodes.length > 0) {
-		const lastNode = textNodes[textNodes.length - 1];
-		return {
-			node: lastNode,
-			offset: lastNode.textContent?.length || 0,
-		};
-	}
-
-	return null;
+export const moveCursorToStart = (element: HTMLElement): void => {
+	const range = document.createRange();
+	const selection = window.getSelection();
+	range.setStart(element, 0);
+	range.collapse(true);
+	selection?.removeAllRanges();
+	selection?.addRange(range);
 };
 
-// Helper to get the last text node in an element
-const getLastTextNodeIn = (element: Node) => {
-	const walker = createTextWalker(element, (node) => node.textContent !== ZWS);
-
-	let lastNode = null;
-	let node = walker.nextNode();
-	while (node) {
-		lastNode = node;
-		node = walker.nextNode();
-	}
-
-	return lastNode;
-};
-
-const checkIfFormattingJustCompleted = (
-	node: InlineNode,
-	originalOffset: number, // cursor offset in originalText
-	nodeStartOffset: number, // a hint where the node roughly starts
-	originalText: string,
-): boolean => {
-	if (node.type === "text") return false;
-
-	const markers = getMarkersForType(node.type) ?? [];
-	if (!markers.length) return false;
-
-	// sort longest-first (*** before ** before *)
-	const sortedMarkers = [...markers].sort((a, b) => b.length - a.length);
-	const maxMarkerLen = sortedMarkers[0]?.length ?? 0;
-
-	const nodeContent = getNodeTextContent(node);
-	if (!nodeContent) return false;
-
-	// search for the nodeContent near the provided start offset.
-	// this handles the case where nodeStartOffset might point at the opening marker
-	const searchStart = Math.max(0, nodeStartOffset - maxMarkerLen);
-	const foundAt = originalText.indexOf(nodeContent, searchStart);
-	if (foundAt === -1) return false; // couldn't locate the node content in originalText
-
-	const nodeEndOffset = foundAt + nodeContent.length;
-
-	// Check each marker — only accept if the text immediately after nodeContent
-	// is the marker and the cursor (originalOffset) is right after that marker.
-	for (const marker of sortedMarkers) {
-		const markerLen = marker.length;
-		const closingCandidate = originalText.slice(
-			nodeEndOffset,
-			nodeEndOffset + markerLen,
-		);
-		if (closingCandidate !== marker) continue;
-
-		const expectedCursorPos = nodeEndOffset + markerLen;
-		if (originalOffset === expectedCursorPos) {
-			return true;
-		}
-	}
-
-	return false;
-};
-
-const getMarkersForType = (type: string) => {
-	switch (type) {
-		case "strong":
-			return ["**", "__"];
-		case "emphasis":
-			return ["*", "_"];
-		case "strongEmphasis":
-			return ["***", "___"];
-		case "strikethrough":
-			return ["~~"];
-		case "code":
-			return ["`"];
-		default:
-			return [];
+export const restoreCursor = (
+	selection: Selection,
+	savedContainer: Node,
+	savedOffset: number,
+	fallback: HTMLElement,
+): void => {
+	try {
+		const range = document.createRange();
+		range.setStart(savedContainer, savedOffset);
+		range.collapse(true);
+		selection.removeAllRanges();
+		selection.addRange(range);
+	} catch {
+		moveCursorToStart(fallback);
 	}
 };
