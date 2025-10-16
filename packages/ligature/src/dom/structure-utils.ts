@@ -1,20 +1,35 @@
-import { isKnownInlineElement } from "../actions/utils";
 import { getClosestBlock } from "../core/utils";
 import { isHTMLElement, isTextNode } from "./utils";
-import { isOnlyZWS, ZWS } from "./zw-utils";
+import { isOnlyZWS } from "./zw-utils";
 
-const shouldProcessAsBlock = (element: HTMLElement): boolean => {
-	return (
-		element.tagName === "P" ||
-		element.tagName === "OL" ||
-		element.tagName === "UL" ||
-		element.tagName === "LI" ||
-		(element.tagName.startsWith("H") && element.tagName.length === 2)
-	);
+const BLOCK_TAGS = new Set([
+	"P",
+	"OL",
+	"UL",
+	"LI",
+	"H1",
+	"H2",
+	"H3",
+	"H4",
+	"H5",
+	"H6",
+]);
+
+export const isBlockElement = (
+	element: Node,
+): element is
+	| HTMLParagraphElement
+	| HTMLHeadingElement
+	| HTMLLIElement
+	| HTMLOListElement
+	| HTMLUListElement => {
+	return isHTMLElement(element) && BLOCK_TAGS.has(element.tagName);
 };
 
-export const isInlineElement = (el: Node): el is HTMLElement =>
-	isHTMLElement(el) && isKnownInlineElement(el);
+const INLINE_TAGS = new Set(["STRONG", "EM", "CODE", "S"]);
+
+export const isInlineElement = (el: Node) =>
+	isHTMLElement(el) && INLINE_TAGS.has(el.tagName);
 
 export const getOutermostInline = (
 	el: HTMLElement,
@@ -35,8 +50,8 @@ export const getImmediateInlineParent = (
 ): HTMLElement | null => {
 	let current = node.parentElement;
 	while (current && current !== editor) {
-		if (isKnownInlineElement(current)) return current;
-		if (shouldProcessAsBlock(current)) break;
+		if (isInlineElement(current)) return current;
+		if (isBlockElement(current)) break;
 		current = current.parentElement;
 	}
 	return null;
@@ -65,12 +80,12 @@ export const hasContentBefore = (inline: HTMLElement): boolean => {
 	while (current) {
 		if (isTextNode(current)) {
 			const text = current.textContent || "";
-			if (text.length > 1 || (text.length === 1 && text !== ZWS)) {
+			if (!isOnlyZWS(text)) {
 				return true;
 			}
-		} else if (isHTMLElement(current) && isKnownInlineElement(current)) {
+		} else if (isHTMLElement(current) && isInlineElement(current)) {
 			const text = current.textContent || "";
-			if (text.length > 0 && text !== ZWS) {
+			if (!isOnlyZWS(text)) {
 				return true;
 			}
 		} else {

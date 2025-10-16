@@ -1,4 +1,5 @@
 import { isHTMLElement, isTextNode } from "../dom/utils";
+import { stripZWS } from "../dom/zw-utils";
 
 export const serializeToMarkdown = (root: HTMLElement) => {
 	const lines: (string | null)[] = [];
@@ -43,9 +44,7 @@ export const serializeToMarkdown = (root: HTMLElement) => {
 const inlineNodeToMarkdown = (node: Node): string => {
 	if (!node) return "";
 	if (isTextNode(node)) {
-		return (node.nodeValue || "")
-			.replace(/[\u200B\n]/g, "")
-			.replace(/\u00a0/g, " "); // Strip ZWS
+		return stripZWS(node.nodeValue ?? "").replace(/\u00a0/g, " ");
 	}
 	if (isHTMLElement(node)) {
 		const tag = node.tagName.toLowerCase();

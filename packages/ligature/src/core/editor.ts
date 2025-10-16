@@ -3,21 +3,24 @@ import { createDeleteHandler, normalizeBlock } from "../actions/delete-action";
 import { createPreventDefaultAction } from "../actions/prevent-default-action";
 import { createShiftArrowLeftAction } from "../actions/shift-leftarrow-action";
 import type { Handler } from "../actions/types";
-import {
-	processNode as blockProcessor,
-	createCursorManager,
-	getSelectionRange,
-} from "../dom/cursor";
+import { processNode as blockProcessor } from "../dom/cursor";
+import { getSelectionRange, setCursor } from "../dom/cursor-utils";
 import { isHTMLElement, isTextNode } from "../dom/utils";
 import { ZWS } from "../dom/zw-utils";
-import { createHistory, type History } from "../history/state-manager";
-import { BLOCK_REGEXES } from "../parsers/block-parser";
-import { INLINE_MARKERS } from "../parsers/inline-parser";
+import {
+	captureChangedBlocks,
+	captureEditorState,
+	createHistoryManager,
+	type HistoryEntryType,
+	type HistoryState,
+	restoreEditorState,
+	restoreSelection,
+} from "../history";
+import { createMutationProcessor } from "../observers/mutation-observer";
 import { serializeToMarkdown } from "../parsers/serializer";
 import { debounce } from "../performance/debounce";
-import { normalizeInline, normalizeRootChild } from "./normalization";
 import { renderMarkdown } from "./renderer";
-import { getClosestBlock, getClosestNonTextNode } from "./utils";
+import { getClosestBlock } from "./utils";
 
 export interface EditorOptions {
 	debounceMs?: number;
@@ -29,78 +32,134 @@ export const createEditor = ({
 	value: _value = "",
 }: EditorOptions = {}) => {
 	let element: HTMLElement;
-	let history = createHistory();
-	const patternCache = new Map();
-	const pendingProcess = new Set<Node>();
+	let mutationProcessor: ReturnType<typeof createMutationProcessor>;
 	const actions = createActionRegistry();
-	const cursorManager = createCursorManager();
 	let isProcessing = false;
-	const MAX_FOLLOWUP_PASSES = 6;
+	const historyManager = createHistoryManager({ maxSize: 100 });
+	let lastSavedState!: HistoryState;
+	let lastBlockId: string | null = null;
 
-	// All your existing functions stay the same, but reference `element` directly
+	// Debounced save for typing (longer delay than markdown processing)
+	const debouncedHistorySave = debounce(() => {
+		saveHistoryEntry("typing");
+	}, 1000);
+
+	function handleInput() {
+		debouncedHistorySave();
+	}
+
+	function saveHistoryEntry(type: HistoryEntryType) {
+		if (historyManager.isRestoring) return;
+
+		const currentState = captureEditorState(element);
+
+		// Skip if nothing changed
+		if (!hasStateChanged(lastSavedState, currentState)) {
+			return;
+		}
+
+		// Determine which blocks changed
+		const changedBlocks = captureChangedBlocks(element, lastSavedState);
+
+		// For "before", only include blocks that are about to change
+		const beforeBlocks =
+			lastSavedState?.blocks.filter((block) =>
+				changedBlocks.some((changed) => changed.blockId === block.blockId),
+			) || [];
+
+		historyManager.push({
+			type,
+			before: {
+				blocks: beforeBlocks,
+				selection: lastSavedState?.selection || null,
+			},
+			after: {
+				blocks: changedBlocks,
+				selection: currentState.selection,
+			},
+		});
+
+		lastSavedState = currentState;
+	}
+
+	function hasStateChanged(before: HistoryState, after: HistoryState): boolean {
+		if (!before || !after) return true;
+
+		// Compare block count
+		if (before.blocks.length !== after.blocks.length) return true;
+
+		// Compare each block's HTML
+		for (let i = 0; i < before.blocks.length; i++) {
+			if (before.blocks[i].html !== after.blocks[i].html) return true;
+		}
+
+		// Selection change alone doesn't count as a history-worthy change
+		return false;
+	}
+
+	function handleUndo() {
+		debouncedHistorySave.cancel();
+
+		const state = historyManager.undo();
+		if (!state) return;
+
+		mutationProcessor.setRestoring(true);
+		restoreEditorState(element, state);
+
+		if (state.selection) {
+			restoreSelection(element, state.selection);
+		}
+
+		lastSavedState = captureEditorState(element);
+
+		queueMicrotask(() => {
+			mutationProcessor.setRestoring(false);
+		});
+	}
+
+	function handleRedo() {
+		debouncedHistorySave.cancel();
+
+		const state = historyManager.redo();
+		if (!state) return;
+
+		mutationProcessor.setRestoring(true);
+		restoreEditorState(element, state);
+
+		if (state.selection) {
+			restoreSelection(element, state.selection);
+		}
+
+		lastSavedState = captureEditorState(element);
+
+		queueMicrotask(() => {
+			mutationProcessor.setRestoring(false);
+		});
+	}
+
 	function processBlock(block: Node) {
 		blockProcessor(block, block === element);
 	}
 
-	function processPendingNodes(nodes: Node[], followupCount = 0) {
-		if (isProcessing || followupCount > MAX_FOLLOWUP_PASSES) return;
+	function processPendingNodes(nodes: Node[]) {
+		if (isProcessing) return;
 
 		isProcessing = true;
+
 		try {
 			for (const node of nodes) {
-				const block = getClosestNonTextNode(node, element);
-
+				const block = getClosestBlock(node, element);
 				if (!block) continue;
-
 				processBlock(block);
-
-				// const selection = window.getSelection();
-
-				// if (isHTMLElement(block) && selection) {
-				// 	normalizeBlock(block, selection);
-				// }
 			}
 		} finally {
 			isProcessing = false;
 		}
 	}
 
-	const saveHistoryState = (
-		history: History,
-		editor: HTMLElement,
-		operation = "edit",
-	) => {
-		if (history.isUndoRedo) return history;
-
-		const state = {
-			html: editor.innerHTML,
-			selection: cursorManager.captureSelectionState(editor),
-			timestamp: Date.now(),
-			operation,
-		};
-
-		const states = [
-			...history.states.slice(0, history.currentIndex + 1),
-			state,
-		];
-		const trimmedStates =
-			states.length > history.maxSize ? states.slice(-history.maxSize) : states;
-
-		return {
-			...history,
-			states: trimmedStates,
-			currentIndex: trimmedStates.length - 1,
-		};
-	};
-
 	const actionContext = {
-		cursorManager,
 		get editor() {
 			return element;
-		},
-		getHistory: () => history,
-		setHistory: (newHistory: History) => {
-			history = newHistory;
 		},
 	};
 
@@ -110,16 +169,41 @@ export const createEditor = ({
 		actions.register("shift+arrowleft", createShiftArrowLeftAction());
 	}
 
-	let isSelectingText = false;
-
 	function handleKeydown(event: KeyboardEvent) {
+		// Handle undo/redo first
+		if (
+			(event.ctrlKey || event.metaKey) &&
+			event.key === "z" &&
+			!event.shiftKey
+		) {
+			event.preventDefault();
+			handleUndo();
+			return;
+		}
+
+		if (
+			(event.ctrlKey || event.metaKey) &&
+			((event.key === "z" && event.shiftKey) || event.key === "y")
+		) {
+			event.preventDefault();
+			handleRedo();
+			return;
+		}
+
+		// Handle custom actions
 		const shouldCustomHandle = actions.canHandle(event);
-
-		isSelectingText = event.key.startsWith("Arrow") && event.shiftKey;
-
 		if (shouldCustomHandle) {
-			withObserverPaused(() => {
+			mutationProcessor.withPaused(() => {
 				actions.handle(event, actionContext);
+			});
+		}
+
+		// Save before destructive operations
+		if (isDestructiveKey(event.key)) {
+			debouncedHistorySave.flush();
+
+			queueMicrotask(() => {
+				saveHistoryEntry(event.key === "Enter" ? "split" : "delete");
 			});
 		}
 
@@ -136,10 +220,6 @@ export const createEditor = ({
 				}
 			});
 		}
-
-		if (event.key === "Enter") {
-			history = saveHistoryState(history, element, "enter");
-		}
 	}
 
 	const isDestructiveKey = (key: string): boolean => {
@@ -149,40 +229,38 @@ export const createEditor = ({
 	let isAdjustingCursor = false;
 
 	function handleSelectionChange() {
-		if (isAdjustingCursor || isSelectingText) {
-			isSelectingText = false;
-			return;
-		}
+		if (isAdjustingCursor) return;
 
 		const selection = window.getSelection();
 		if (!selection || selection.rangeCount === 0) return;
 
 		const range = selection.getRangeAt(0);
 
-		// Only adjust collapsed cursors - leave selections alone
+		// Only adjust collapsed cursors
 		if (!range.collapsed) return;
 
 		if (isCursorBeforeBlockStartZWS(range)) {
 			isAdjustingCursor = true;
 
 			try {
-				const textNode = range.startContainer as Text;
-				const newRange = document.createRange();
-				newRange.setStart(textNode, 1);
-				newRange.collapse(true);
-
-				selection.removeAllRanges();
-				selection.addRange(newRange);
+				setCursor(range.startContainer, 1);
 			} finally {
 				isAdjustingCursor = false;
 			}
 		}
+
+		// Flush typing history when moving to different block
+		const currentBlock = getClosestBlock(range.startContainer, element);
+		const currentBlockId = currentBlock?.dataset.blockId;
+
+		if (currentBlockId && currentBlockId !== lastBlockId) {
+			debouncedHistorySave.flush();
+			lastBlockId = currentBlockId;
+		}
 	}
 
 	const isCursorBeforeBlockStartZWS = (range: Range): boolean => {
-		// Only handle collapsed cursor
 		if (!range.collapsed) return false;
-
 		if (range.startOffset !== 0) return false;
 
 		const container = range.startContainer;
@@ -205,77 +283,7 @@ export const createEditor = ({
 
 	const debouncedProcess = debounce((nodes: Node[]) => {
 		processPendingNodes(nodes);
-		mo.observe(element, {
-			subtree: true,
-			characterData: true,
-			childList: true,
-			characterDataOldValue: true,
-		});
 	}, debounceMs);
-
-	const mo = new MutationObserver((mutations) => {
-		if (history.isUndoRedo || isProcessing) return;
-
-		for (const mutation of mutations) {
-			for (const node of mutation.addedNodes) {
-				if (node.parentNode === element) {
-					let normalized: Node | null = null;
-
-					withObserverPaused(() => {
-						normalized = normalizeRootChild(node);
-					});
-
-					if (normalized) return;
-				} else if (isHTMLElement(node) && ["B", "I"].includes(node.nodeName)) {
-					let normalized: Node | null = null;
-
-					withObserverPaused(() => {
-						normalized = normalizeInline(node);
-					});
-
-					if (normalized) return;
-				}
-			}
-		}
-
-		const hasMarkdownPatterns = mutations.some((mut) => {
-			if (mut.type !== "characterData" || !mut.target.textContent) return false;
-
-			const text = mut.target.textContent.replace(new RegExp(`^${ZWS}`), "");
-
-			return (
-				INLINE_MARKERS.some((marker) => text.includes(marker)) ||
-				BLOCK_REGEXES.some((regex) => regex.test(text))
-			);
-		});
-
-		if (!hasMarkdownPatterns) return;
-		mo.disconnect();
-
-		for (const mut of mutations) {
-			if (mut.type === "characterData") {
-				pendingProcess.add(mut.target);
-			}
-		}
-		debouncedProcess([...pendingProcess]);
-		pendingProcess.clear();
-	});
-
-	function withObserverPaused<T>(fn: () => T): T {
-		mo.disconnect();
-		try {
-			return fn();
-		} finally {
-			requestAnimationFrame(() => {
-				mo.observe(element, {
-					subtree: true,
-					characterData: true,
-					childList: true,
-					characterDataOldValue: true,
-				});
-			});
-		}
-	}
 
 	return {
 		attach(el: HTMLElement) {
@@ -285,17 +293,28 @@ export const createEditor = ({
 				element.setAttribute("contenteditable", "true");
 			}
 
+			// Create mutation processor
+			mutationProcessor = createMutationProcessor(element, debouncedProcess, {
+				onNormalize: () => {
+					// Normalization triggers immediate history save
+					debouncedHistorySave.flush();
+				},
+			});
+
+			mutationProcessor.start();
+
 			setupActions();
 
 			element.addEventListener("keydown", handleKeydown);
+			element.addEventListener("input", handleInput);
 			document.addEventListener("selectionchange", handleSelectionChange);
 
-			mo.observe(element, {
-				subtree: true,
-				characterData: true,
-				childList: true,
-				characterDataOldValue: true,
-			});
+			// Initial state capture
+			lastSavedState = captureEditorState(element);
+			const initialBlock = element.children[0];
+			if (isHTMLElement(initialBlock)) {
+				lastBlockId = initialBlock.dataset.blockId || null;
+			}
 
 			return this;
 		},
@@ -305,12 +324,13 @@ export const createEditor = ({
 		setContent: (content: string) => {
 			if (!content.trim()) {
 				element.innerHTML = "";
+				lastSavedState = captureEditorState(element);
 				return;
 			}
 
 			if (isProcessing) return;
 
-			withObserverPaused(() => {
+			mutationProcessor.withPaused(() => {
 				isProcessing = true;
 
 				try {
@@ -321,6 +341,9 @@ export const createEditor = ({
 
 					element.innerHTML = "";
 					element.appendChild(fragment);
+
+					// Update saved state
+					lastSavedState = captureEditorState(element);
 				} finally {
 					setTimeout(() => {
 						isProcessing = false;
@@ -335,9 +358,9 @@ export const createEditor = ({
 			actions.register(name, action),
 
 		destroy: () => {
-			mo.disconnect();
-			patternCache.clear();
-			pendingProcess.clear();
+			mutationProcessor.destroy();
+			debouncedHistorySave.cancel();
+			debouncedProcess.cancel();
 			element.removeEventListener("keydown", handleKeydown);
 			document.removeEventListener("selectionchange", handleSelectionChange);
 		},

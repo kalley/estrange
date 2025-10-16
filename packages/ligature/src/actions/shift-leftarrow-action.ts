@@ -2,6 +2,7 @@ import { getClosestBlock } from "../core/utils";
 import {
 	getImmediateInlineParent,
 	getOutermostInline,
+	isInlineElement,
 } from "../dom/structure-utils";
 import { isHTMLElement, isTextNode } from "../dom/utils";
 import {
@@ -11,7 +12,6 @@ import {
 } from "../dom/walker";
 import { isOnlyZWS, startsWithZWS } from "../dom/zw-utils";
 import type { Handler } from "./types";
-import { isKnownInlineElement } from "./utils";
 
 export const createShiftArrowLeftAction = (): Handler => (_event, context) => {
 	const selection = window.getSelection();
@@ -71,7 +71,7 @@ function skipAfterInlineAdjacentZWS(selection: Selection): boolean {
 	if (!startsWithZWS(focusNode.textContent ?? "")) return false;
 
 	const prevSibling = focusNode.previousSibling;
-	if (!isHTMLElement(prevSibling) || !isKnownInlineElement(prevSibling)) {
+	if (!isHTMLElement(prevSibling) || !isInlineElement(prevSibling)) {
 		return false;
 	}
 

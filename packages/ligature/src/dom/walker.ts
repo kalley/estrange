@@ -1,12 +1,15 @@
-import { isTextNode } from "./utils";
+import { isElementNode, isTextNode } from "./utils";
 import { ZWS } from "./zw-utils";
 
-interface TextWalker extends TreeWalker {
-	currentNode: Text;
-	nextNode(): Text | null;
-	previousNode(): Text | null;
-	lastChild(): Text | null;
+interface TypedWalker<T extends Node> extends TreeWalker {
+	currentNode: T;
+	nextNode(): T | null;
+	previousNode(): T | null;
+	lastChild(): T | null;
 }
+
+type TextWalker = TypedWalker<Text>;
+type ElementWalker = TypedWalker<Element>;
 
 export const createTextWalker = (
 	root: Node,
@@ -14,7 +17,7 @@ export const createTextWalker = (
 ): TextWalker => {
 	const wrappedFilter = filter
 		? (node: Node) =>
-				node.nodeType === Node.TEXT_NODE && filter(node as Text)
+				isTextNode(node) && filter(node)
 					? NodeFilter.FILTER_ACCEPT
 					: NodeFilter.FILTER_SKIP
 		: null;
@@ -25,6 +28,25 @@ export const createTextWalker = (
 		wrappedFilter,
 	);
 	return walker as TextWalker;
+};
+
+export const createElementWalker = (
+	root: Node,
+	filter?: (node: Element) => boolean,
+): ElementWalker => {
+	const wrappedFilter = filter
+		? (node: Node) =>
+				isElementNode(node) && filter(node)
+					? NodeFilter.FILTER_ACCEPT
+					: NodeFilter.FILTER_SKIP
+		: null;
+
+	const walker = document.createTreeWalker(
+		root,
+		NodeFilter.SHOW_ELEMENT,
+		wrappedFilter,
+	);
+	return walker as ElementWalker;
 };
 
 export const ensureConnected = (node: Node | null): node is Node => {

@@ -30,6 +30,8 @@ dist/              # build output
 *.tsbuildinfo      # TypeScript incremental builds
 npm-debug.log*
 package-lock.json  # <-- optional; keep if you want reproducible builds
+# TypeScript build info
+*.tsbuildinfo
 
 # Local environment files
 .env

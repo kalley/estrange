@@ -1,4 +1,4 @@
-import { getSelectionRange } from "../dom/cursor";
+import { getSelectionRange } from "../dom/cursor-utils";
 import type { ActionContext, EditorKey, Handler } from "./types";
 
 const normalizeKey = (event: KeyboardEvent): string => {

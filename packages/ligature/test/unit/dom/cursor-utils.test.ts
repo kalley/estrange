@@ -10,14 +10,12 @@ import {
 
 describe("cursor-utils", () => {
 	let container: HTMLElement;
-	let selection: Selection;
 
 	beforeEach(() => {
 		document.body.innerHTML = ""; // clear between tests
 		container = document.createElement("div");
 		document.body.appendChild(container);
-		selection = window.getSelection()!;
-		selection?.removeAllRanges();
+		window.getSelection()?.removeAllRanges();
 	});
 
 	// -------------------------------------------------------------------------
@@ -121,6 +119,10 @@ describe("cursor-utils", () => {
 	// -------------------------------------------------------------------------
 
 	it("restores cursor to a saved position", () => {
+		const selection = window.getSelection();
+
+		assert(selection instanceof Selection);
+
 		const node = createTextNode("abc");
 		const range = document.createRange();
 		range.setStart(node, 2);
@@ -136,6 +138,10 @@ describe("cursor-utils", () => {
 	});
 
 	it("falls back if saved node removed", () => {
+		const selection = window.getSelection();
+
+		assert(selection instanceof Selection);
+
 		const node = createTextNode("abc");
 		const savedContainer = node;
 		const savedOffset = 2;

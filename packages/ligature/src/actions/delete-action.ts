@@ -25,9 +25,7 @@ import {
 	ZWS,
 } from "../dom/zw-utils";
 
-import { saveHistoryState } from "../history/state-manager";
 import type { ActionContext, Handler } from "./types";
-import { isKnownInlineElement } from "./utils";
 
 // ============================================================================
 // MAIN HANDLER
@@ -60,17 +58,6 @@ export const createDeleteHandler = (): Handler => (event, context) => {
 	// Phase 3: Let native delete happen
 	const block = getClosestBlock(range.commonAncestorContainer, context.editor);
 
-	queueMicrotask(() => {
-		context.setHistory(
-			saveHistoryState(
-				context.getHistory(),
-				context.editor,
-				context.cursorManager,
-				"backspace",
-			),
-		);
-	});
-
 	return block;
 };
 
@@ -86,7 +73,7 @@ const normalizeAfterInlineAdjacentZWS = (): boolean => {
 	if (!isTextNode(node) || range.startOffset > 1) return false;
 
 	const prevSibling = node.previousSibling;
-	if (!isHTMLElement(prevSibling) || !isKnownInlineElement(prevSibling)) {
+	if (!isHTMLElement(prevSibling) || !isInlineElement(prevSibling)) {
 		return false;
 	}
 
@@ -154,15 +141,6 @@ const handleBlockMerge = (context: ActionContext): HTMLElement | null => {
 	}
 
 	block.remove();
-
-	context.setHistory(
-		saveHistoryState(
-			context.getHistory(),
-			context.editor,
-			context.cursorManager,
-			"backspace",
-		),
-	);
 
 	return prevBlock;
 };

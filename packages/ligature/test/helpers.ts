@@ -1,9 +1,17 @@
 import { getByTestId } from "@testing-library/dom";
-import type { ActionContext, Handler } from "../src/actions/types";
+import type { ActionContext } from "../src/actions/types";
 import { isKnownInlineElement } from "../src/actions/utils";
 import { isHTMLElement } from "../src/dom/utils";
 import { createTextWalker } from "../src/dom/walker";
 import { ZWS } from "../src/dom/zw-utils";
+
+export function assertSelection(
+	selection: Selection | null,
+): asserts selection is Selection {
+	if (!selection) {
+		throw new Error("Selection is null");
+	}
+}
 
 export function assertZWSInvariants(
 	editor: HTMLElement,
@@ -49,26 +57,6 @@ export function assertZWSInvariants(
 export function createEditor(content: string): HTMLElement {
 	document.body.innerHTML = `<div contenteditable="true" data-testid="editor">${content}</div>`;
 	return getByTestId(document.body, "editor");
-}
-
-/**
- * Wire up a handler to an editor's keydown events
- */
-export function wireHandler(
-	editor: HTMLElement,
-	handler: Handler,
-	getContext: () => ActionContext,
-) {
-	editor.addEventListener("keydown", (event) => {
-		const context = getContext();
-		const priority = handler.canHandle(event, context);
-		if (priority > 0) {
-			const result = handler.handle(event, context);
-			if (result.preventDefault) {
-				event.preventDefault();
-			}
-		}
-	});
 }
 
 /**

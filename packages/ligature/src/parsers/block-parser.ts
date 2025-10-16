@@ -1,4 +1,4 @@
-import { ZWS } from "../dom/zw-utils";
+import { stripZWS, ZWS } from "../dom/zw-utils";
 
 export interface HeadingBlock {
 	type: "heading";
@@ -84,7 +84,7 @@ export const parseBlockMarkdown = (
 ) => {
 	if (!text.trim()) return null;
 
-	const cleanText = text.replaceAll(ZWS, "");
+	const cleanText = stripZWS(text);
 
 	for (const parser of PARSERS) {
 		const match = cleanText.match(parser.regex);

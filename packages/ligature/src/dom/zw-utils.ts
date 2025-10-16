@@ -1,3 +1,5 @@
+import { isTextNode } from "./utils";
+
 export const ZWS = "\u200B";
 
 export const getZWSCount = (text: string) => {
@@ -23,3 +25,14 @@ export const normalizeZWS = (text: string): string =>
 
 export const isOnlyZWS = (text: string): boolean =>
 	text.length === getZWSCount(text);
+
+export const ensureBlockHasLeadingZWS = (block: HTMLElement) => {
+	const firstChild = block.firstChild;
+
+	if (!isTextNode(firstChild)) {
+		block.insertBefore(document.createTextNode(ZWS), firstChild ?? null);
+		return;
+	}
+
+	firstChild.textContent = normalizeZWS(firstChild.textContent ?? "");
+};

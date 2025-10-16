@@ -1,4 +1,4 @@
-import { ZWS } from "../dom/zw-utils";
+import { normalizeZWS, ZWS } from "../dom/zw-utils";
 
 export type InlineNode =
 	| { type: "text"; value: string }
@@ -448,16 +448,12 @@ export function astToDOM(
 
 		if (node.type === "text") {
 			if (node.value) {
-				const text = includeZWS
-					? `${ZWS}${node.value.replace(new RegExp(`^${ZWS}`), "")}`
-					: node.value;
+				const text = includeZWS ? normalizeZWS(node.value) : node.value;
 				fragment.appendChild(document.createTextNode(text));
 			}
 		} else if (node.type === "code") {
 			const codeEl = document.createElement("code");
-			const text = includeZWS
-				? `${ZWS}${node.value.replace(new RegExp(`^${ZWS}`), "")}`
-				: node.value;
+			const text = includeZWS ? normalizeZWS(node.value) : node.value;
 			codeEl.appendChild(document.createTextNode(text));
 			fragment.appendChild(codeEl);
 

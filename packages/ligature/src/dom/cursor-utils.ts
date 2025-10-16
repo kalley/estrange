@@ -42,7 +42,7 @@ export const getSelectionRange = (): Range | null => {
 /**
  * Sets a collapsed cursor position and applies it, with safety guards.
  */
-const setCursor = (
+export const setCursor = (
 	node: Node,
 	offset: number,
 	selection: Selection | null = window.getSelection(),
