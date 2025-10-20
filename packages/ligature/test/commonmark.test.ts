@@ -19,6 +19,7 @@ describe("Ligature parsing", () => {
 	const examples = tests
 		.filter(({ number }) => passing.includes(number))
 		.map(({ number }) => number);
+
 	Object.values(
 		tests
 			// .filter(({ html }) => !html.match("<br"))

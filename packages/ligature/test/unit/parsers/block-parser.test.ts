@@ -1,4 +1,4 @@
-import { ZWS } from "../../../src/dom/zw-manager";
+import { ZWS } from "../../../src/dom/zw-utils";
 import { parseBlockMarkdown } from "../../../src/parsers/block-parser";
 
 describe("parseBlockMarkdown", () => {

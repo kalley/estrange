@@ -163,11 +163,12 @@ const convertBlockElement = (
 	const renderOptions = { includeZWS: true, currentList: null };
 	const newElement = blockRenderers[parsed.type](parsed, renderOptions);
 
+	newElement.dataset.blockId = element.dataset.blockId;
+
 	if (isRoot) {
 		element.innerHTML = "";
 		element.appendChild(newElement);
 	} else {
-		newElement.dataset.blockId = element.dataset.blockId;
 		// Replace the element
 		element.replaceWith(newElement);
 	}

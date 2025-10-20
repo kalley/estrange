@@ -10,7 +10,6 @@ import {
 	type UnorderedListBlock,
 } from "../parsers/block-parser";
 import { astToDOM, parseInlinePatterns } from "../parsers/inline-parser";
-import { uniqueId } from "./utils";
 
 export interface FormattingResult {
 	transformed: boolean;
@@ -104,7 +103,6 @@ const createHeading = (block: HeadingBlock, options: RenderOptions) => {
 	options.currentList = null;
 
 	const heading = document.createElement(`h${block.level}`);
-	heading.dataset.blockId = uniqueId("block");
 	setContent(heading, block.content, options);
 	return heading;
 };
@@ -112,7 +110,6 @@ const createHeading = (block: HeadingBlock, options: RenderOptions) => {
 const createParagraph = (block: ParagraphBlock, options: RenderOptions) => {
 	options.currentList = null;
 	const paragraph = document.createElement("p");
-	paragraph.dataset.blockId = uniqueId("block");
 	setContent(paragraph, block.content, options);
 	return paragraph;
 };
@@ -122,9 +119,7 @@ const createHorizontalRule = (
 	options: RenderOptions,
 ) => {
 	options.currentList = null;
-	const hr = document.createElement("hr");
-	hr.dataset.blockId = uniqueId("block");
-	return hr;
+	return document.createElement("hr");
 };
 
 const createList = (
@@ -132,7 +127,6 @@ const createList = (
 	options: RenderOptions,
 ) => {
 	const list = document.createElement(block.type);
-	list.dataset.blockId = uniqueId("block");
 	if (block.type === "ol" && block.start !== 1) {
 		list.setAttribute("start", `${block.start}`);
 	}

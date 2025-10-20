@@ -95,13 +95,18 @@ describe("createMutationProcessor", () => {
 	});
 
 	it("normalizes direct text node additions", async () => {
-		const { cleanup, processedNodes } = createProcessor();
+		const normalizedNodes = [];
+		const { cleanup } = createProcessor({
+			onNormalize: (node) => {
+				normalizedNodes.push(node);
+			},
+		});
 
 		const textNode = document.createTextNode("hello");
 		container.appendChild(textNode);
 
 		await waitFor(() => {
-			expect(processedNodes.length).toBeGreaterThan(0);
+			expect(normalizedNodes.length).toBeGreaterThan(0);
 		});
 
 		expect(container.querySelector("p")).toBeTruthy();

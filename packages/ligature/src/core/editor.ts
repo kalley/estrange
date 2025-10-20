@@ -20,7 +20,7 @@ import { createMutationProcessor } from "../observers/mutation-observer";
 import { serializeToMarkdown } from "../parsers/serializer";
 import { debounce } from "../performance/debounce";
 import { renderMarkdown } from "./renderer";
-import { getClosestBlock } from "./utils";
+import { getClosestBlock, uniqueId } from "./utils";
 
 export interface EditorOptions {
 	debounceMs?: number;
@@ -341,6 +341,14 @@ export const createEditor = ({
 
 					element.innerHTML = "";
 					element.appendChild(fragment);
+
+					Array.from(element.children)
+						.filter(isHTMLElement)
+						.forEach((block) => {
+							if (!block.dataset.blockId) {
+								block.dataset.blockId = uniqueId("block");
+							}
+						});
 
 					// Update saved state
 					lastSavedState = captureEditorState(element);

@@ -72,6 +72,13 @@ export const restoreSelection = (
 };
 
 export function restoreEditorState(editor: HTMLElement, state: HistoryState) {
+	// Handle restoring to completely empty
+	if (!state.blocks || state.blocks.length === 0) {
+		editor.innerHTML = "";
+		window.getSelection()?.removeAllRanges();
+		return;
+	}
+
 	// Handle deletions
 	if (state.deletedBlockIds) {
 		state.deletedBlockIds.forEach((blockId) => {

@@ -18,12 +18,7 @@ export const normalizeRootChild = (node: Node) => {
 	} else if (isHTMLElement(node)) {
 		const newNode = node.nodeName !== "P" ? document.createElement("p") : node;
 
-		newNode.dataset.blockId =
-			document.body.querySelectorAll(
-				`[data-block-id="${node.dataset.blockId}"]`,
-			).length > 1
-				? uniqueId("block")
-				: node.dataset.blockId;
+		newNode.dataset.blockId = uniqueId("block");
 
 		node.querySelector("br")?.remove();
 
