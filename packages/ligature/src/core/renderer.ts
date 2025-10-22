@@ -1,5 +1,5 @@
 import { createTextWalker } from "../dom/walker";
-import { stripZWS, ZWS } from "../dom/zw-utils";
+import { stripZWS } from "../dom/zw-utils";
 import {
 	type Block,
 	type HeadingBlock,
@@ -19,10 +19,7 @@ export interface FormattingResult {
 	};
 }
 
-export const applyInlineFormatting = (
-	block: HTMLElement,
-	includeZWS: boolean,
-): FormattingResult => {
+export const applyInlineFormatting = (block: HTMLElement): FormattingResult => {
 	const textNodes = createTextWalker(block);
 
 	let transformed = false;
@@ -40,7 +37,7 @@ export const applyInlineFormatting = (
 		if (!needsFormatting) continue;
 
 		transformed = true;
-		const fragment = astToDOM(ast, includeZWS);
+		const fragment = astToDOM(ast);
 
 		textNode.parentNode?.replaceChild(fragment, textNode);
 	}
@@ -78,24 +75,19 @@ export const applyInlineFormatting = (
 	return { transformed: true };
 };
 
-const setContent = (
-	element: HTMLElement,
-	content: string,
-	options: { includeZWS: boolean } = { includeZWS: false },
-) => {
+const setContent = (element: HTMLElement, content: string) => {
 	const text = stripZWS(content).trim();
 
 	if (!text) {
-		element.textContent = options.includeZWS ? ZWS : "";
+		element.textContent = "";
 		return;
 	}
 
-	element.textContent = options.includeZWS ? `${ZWS}${text}` : text;
-	applyInlineFormatting(element, options.includeZWS);
+	element.textContent = text;
+	applyInlineFormatting(element);
 };
 
 interface RenderOptions {
-	includeZWS: boolean;
 	currentList: HTMLUListElement | HTMLOListElement | null;
 }
 
@@ -103,14 +95,14 @@ const createHeading = (block: HeadingBlock, options: RenderOptions) => {
 	options.currentList = null;
 
 	const heading = document.createElement(`h${block.level}`);
-	setContent(heading, block.content, options);
+	setContent(heading, block.content);
 	return heading;
 };
 
 const createParagraph = (block: ParagraphBlock, options: RenderOptions) => {
 	options.currentList = null;
 	const paragraph = document.createElement("p");
-	setContent(paragraph, block.content, options);
+	setContent(paragraph, block.content);
 	return paragraph;
 };
 
@@ -132,7 +124,7 @@ const createList = (
 	}
 	const listItem = document.createElement("li");
 
-	setContent(listItem, block.content, options);
+	setContent(listItem, block.content);
 	list.appendChild(listItem);
 	options.currentList = list;
 	return list;
@@ -141,10 +133,9 @@ const createList = (
 const appendListItem = (
 	list: HTMLUListElement | HTMLOListElement,
 	content: string,
-	options: RenderOptions,
 ) => {
 	const listItem = document.createElement("li");
-	setContent(listItem, content, options);
+	setContent(listItem, content);
 	list.appendChild(listItem);
 	return list;
 };
@@ -159,7 +150,7 @@ const createListItem = <T extends UnorderedListBlock | OrderListBlock>(
 	) {
 		return createList(block, options);
 	} else {
-		return appendListItem(options.currentList, block.content, options);
+		return appendListItem(options.currentList, block.content);
 	}
 };
 
@@ -180,24 +171,17 @@ export const blockRenderers: BlockRenderers = {
 		createParagraph(block as ParagraphBlock, renderOptions),
 };
 
-export const renderMarkdown = (
-	markdown: string,
-	{
-		includeZWS = false,
-		preserveStructure = false,
-	}: { includeZWS?: boolean; preserveStructure?: boolean } = {},
-): DocumentFragment => {
+export const renderMarkdown = (markdown: string): DocumentFragment => {
 	const fragment = document.createDocumentFragment();
 	if (!markdown.trim()) return fragment;
 
 	const lines = markdown.split("\n");
 	const renderOptions = {
-		includeZWS,
 		currentList: null,
 	};
 
 	for (const line of lines) {
-		const block = parseBlockMarkdown(line, { includeZWS, preserveStructure });
+		const block = parseBlockMarkdown(line);
 
 		if (block) {
 			fragment.appendChild(blockRenderers[block.type](block, renderOptions));

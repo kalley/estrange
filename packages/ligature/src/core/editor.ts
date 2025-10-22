@@ -5,6 +5,7 @@ import { createShiftArrowLeftAction } from "../actions/shift-leftarrow-action";
 import type { Handler } from "../actions/types";
 import { processNode as blockProcessor } from "../dom/cursor";
 import { getSelectionRange, setCursor } from "../dom/cursor-utils";
+import { normalizeZWSInElement } from "../dom/normalize-utils";
 import { isHTMLElement, isTextNode } from "../dom/utils";
 import { ZWS } from "../dom/zw-utils";
 import {
@@ -144,17 +145,19 @@ export const createEditor = ({
 	function processPendingNodes(nodes: Node[]) {
 		if (isProcessing) return;
 
-		isProcessing = true;
+		mutationProcessor.withPaused(() => {
+			isProcessing = true;
 
-		try {
-			for (const node of nodes) {
-				const block = getClosestBlock(node, element);
-				if (!block) continue;
-				processBlock(block);
+			try {
+				for (const node of nodes) {
+					const block = getClosestBlock(node, element);
+					if (!block) continue;
+					processBlock(block);
+				}
+			} finally {
+				isProcessing = false;
 			}
-		} finally {
-			isProcessing = false;
-		}
+		});
 	}
 
 	const actionContext = {
@@ -334,10 +337,9 @@ export const createEditor = ({
 				isProcessing = true;
 
 				try {
-					const fragment = renderMarkdown(content, {
-						includeZWS: true,
-						preserveStructure: true,
-					});
+					const fragment = renderMarkdown(content);
+
+					normalizeZWSInElement(fragment);
 
 					element.innerHTML = "";
 					element.appendChild(fragment);

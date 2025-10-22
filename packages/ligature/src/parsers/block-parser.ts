@@ -1,4 +1,4 @@
-import { stripZWS, ZWS } from "../dom/zw-utils";
+import { stripZWS } from "../dom/zw-utils";
 
 export interface HeadingBlock {
 	type: "heading";
@@ -37,13 +37,10 @@ const PARSERS = [
 	{
 		name: "heading",
 		regex: /^\s*(#{1,6})\s+(.*)?$/,
-		handler: (match: RegExpMatchArray, includeZWS: boolean): HeadingBlock => ({
+		handler: (match: RegExpMatchArray): HeadingBlock => ({
 			type: "heading",
 			level: match[1].length,
-			content: (match[2]?.trim() || (includeZWS ? ZWS : "")).replace(
-				/\s+#*$/,
-				"",
-			),
+			content: (match[2]?.trim() || "").replace(/\s+#*$/, ""),
 		}),
 	},
 	{
@@ -54,34 +51,25 @@ const PARSERS = [
 	{
 		name: "ul",
 		regex: /^\s*([-*+])\s+(.*)$/,
-		handler: (
-			match: RegExpMatchArray,
-			includeZWS: boolean,
-		): UnorderedListBlock => ({
+		handler: (match: RegExpMatchArray): UnorderedListBlock => ({
 			type: "ul",
-			content: match[2].trim() || (includeZWS ? ZWS : ""),
+			content: match[2].trim() || "",
 		}),
 	},
 	{
 		name: "ol",
 		regex: /^\s*(\d+)([.)])\s+(.*)$/,
-		handler: (
-			match: RegExpMatchArray,
-			includeZWS: boolean,
-		): OrderListBlock => ({
+		handler: (match: RegExpMatchArray): OrderListBlock => ({
 			type: "ol",
 			start: parseInt(match[1], 10),
-			content: match[3].trim() || (includeZWS ? ZWS : ""),
+			content: match[3].trim() || "",
 		}),
 	},
 ];
 
 export const BLOCK_REGEXES = PARSERS.map((p) => p.regex);
 
-export const parseBlockMarkdown = (
-	text: string,
-	options: { includeZWS?: boolean; preserveStructure?: boolean } = {},
-) => {
+export const parseBlockMarkdown = (text: string) => {
 	if (!text.trim()) return null;
 
 	const cleanText = stripZWS(text);
@@ -89,12 +77,7 @@ export const parseBlockMarkdown = (
 	for (const parser of PARSERS) {
 		const match = cleanText.match(parser.regex);
 		if (match) {
-			const block = parser.handler(match, !!options.includeZWS);
-
-			// Check if block has empty content and we're not preserving structure
-			if (!!options.preserveStructure || !isEmptyBlock(block)) {
-				return block;
-			}
+			return parser.handler(match);
 		}
 	}
 
@@ -103,9 +86,4 @@ export const parseBlockMarkdown = (
 	return trimmedContent
 		? ({ type: "p", content: trimmedContent } as const)
 		: null;
-};
-
-const isEmptyBlock = (block: Block): boolean => {
-	if (block.type === "hr") return false;
-	return !block.content.trim();
 };

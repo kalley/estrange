@@ -1,5 +1,6 @@
 import { applyInlineFormatting, blockRenderers } from "../core/renderer";
 import { type Block, parseBlockMarkdown } from "../parsers/block-parser";
+import { normalizeZWSInElement } from "./normalize-utils";
 import { isBlockElement } from "./structure-utils";
 import { isHTMLElement } from "./utils";
 import { createTextWalker, findLastTextNode } from "./walker";
@@ -125,7 +126,7 @@ export const processNode = (node: Node, isRoot: boolean) => {
 	// Handle lists - just apply inline formatting to list items
 	if (node.tagName === "UL" || node.tagName === "OL") {
 		[...node.querySelectorAll("li")].forEach((li) => {
-			applyInlineFormattingWithCursor(li, true);
+			applyInlineFormattingWithCursor(li);
 		});
 		return;
 	}
@@ -133,25 +134,24 @@ export const processNode = (node: Node, isRoot: boolean) => {
 	// Handle block-level elements that might need conversion
 	if (isBlockElement(node) || isRoot) {
 		const text = stripZWS(node.textContent ?? "");
-		const parsed = parseBlockMarkdown(text, {
-			includeZWS: true,
-			preserveStructure: true,
-		});
+		const parsed = parseBlockMarkdown(text);
 
 		if (parsed && (isRoot || needsToConvert(node, parsed))) {
 			convertBlockElement(node, parsed, isRoot);
 		} else {
 			// Just apply inline formatting
-			applyInlineFormattingWithCursor(node, true);
+			applyInlineFormattingWithCursor(node);
 		}
 	} else {
 		// Just apply inline formatting
-		applyInlineFormattingWithCursor(node, true);
+		applyInlineFormattingWithCursor(node);
 	}
 };
 
 const needsToConvert = (node: HTMLElement, parsed: Block) => {
-	return parsed.type !== node.tagName.toLowerCase();
+	const nodeName = node.tagName.toLowerCase();
+
+	return nodeName === "p" && parsed.type !== nodeName;
 };
 
 const convertBlockElement = (
@@ -159,8 +159,7 @@ const convertBlockElement = (
 	parsed: Block,
 	isRoot: boolean,
 ) => {
-	// Use your block renderers!
-	const renderOptions = { includeZWS: true, currentList: null };
+	const renderOptions = { currentList: null };
 	const newElement = blockRenderers[parsed.type](parsed, renderOptions);
 
 	newElement.dataset.blockId = element.dataset.blockId;
@@ -172,15 +171,15 @@ const convertBlockElement = (
 		// Replace the element
 		element.replaceWith(newElement);
 	}
+
+	normalizeZWSInElement(newElement);
 };
 
-export const applyInlineFormattingWithCursor = (
-	block: HTMLElement,
-	includeZWS: boolean,
-) => {
+export const applyInlineFormattingWithCursor = (block: HTMLElement) => {
 	const selection = window.getSelection();
 	if (!selection?.rangeCount) {
-		applyInlineFormatting(block, includeZWS);
+		normalizeZWSInElement(block);
+		applyInlineFormatting(block);
 		return;
 	}
 
@@ -188,11 +187,13 @@ export const applyInlineFormattingWithCursor = (
 
 	// Only handle typing scenario (collapsed cursor in the block)
 	if (!range.collapsed || !block.contains(range.startContainer)) {
-		applyInlineFormatting(block, includeZWS);
+		normalizeZWSInElement(block);
+		applyInlineFormatting(block);
 		return;
 	}
 
-	const result = applyInlineFormatting(block, includeZWS);
+	normalizeZWSInElement(block);
+	const result = applyInlineFormatting(block);
 
 	// Restore cursor if transformation happened
 	if (result.newCursorPosition) {

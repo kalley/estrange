@@ -1,5 +1,3 @@
-import { normalizeZWS, ZWS } from "../dom/zw-utils";
-
 export type InlineNode =
 	| { type: "text"; value: string }
 	| { type: "emphasis"; children: InlineNode[] }
@@ -437,10 +435,7 @@ function buildAST(
 	return nodes;
 }
 
-export function astToDOM(
-	nodes: InlineNode[],
-	includeZWS: boolean,
-): DocumentFragment {
+export function astToDOM(nodes: InlineNode[]): DocumentFragment {
 	const fragment = document.createDocumentFragment();
 
 	for (let i = 0; i < nodes.length; i++) {
@@ -448,24 +443,12 @@ export function astToDOM(
 
 		if (node.type === "text") {
 			if (node.value) {
-				const text = includeZWS ? normalizeZWS(node.value) : node.value;
-				fragment.appendChild(document.createTextNode(text));
+				fragment.appendChild(document.createTextNode(node.value));
 			}
 		} else if (node.type === "code") {
 			const codeEl = document.createElement("code");
-			const text = includeZWS ? normalizeZWS(node.value) : node.value;
-			codeEl.appendChild(document.createTextNode(text));
+			codeEl.appendChild(document.createTextNode(node.value));
 			fragment.appendChild(codeEl);
-
-			// Add ZWS after code for cursor escape
-			const nextNode = nodes[i + 1];
-			if (
-				includeZWS &&
-				(!nextNode ||
-					(nextNode.type === "text" && !nextNode.value.startsWith(" ")))
-			) {
-				fragment.appendChild(document.createTextNode(ZWS));
-			}
 		} else {
 			const tagName =
 				node.type === "emphasis"
@@ -475,22 +458,9 @@ export function astToDOM(
 						: "s";
 			const element = document.createElement(tagName);
 
-			const childFragment = astToDOM(node.children, includeZWS);
-			if (includeZWS && !childFragment.textContent?.startsWith(ZWS)) {
-				element.appendChild(document.createTextNode(ZWS));
-			}
+			const childFragment = astToDOM(node.children);
 			element.appendChild(childFragment);
 			fragment.appendChild(element);
-
-			// Add ZWS after formatted elements for cursor escape
-			const nextNode = nodes[i + 1];
-			if (
-				includeZWS &&
-				(!nextNode ||
-					(nextNode.type === "text" && !nextNode.value.startsWith(" ")))
-			) {
-				fragment.appendChild(document.createTextNode(ZWS));
-			}
 		}
 	}
 

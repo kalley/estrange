@@ -1,1 +1,2 @@
-export { createEditor as default } from "./core/editor";
+export { createEditor } from "./core/editor";
+export { renderMarkdown } from "./core/renderer";
