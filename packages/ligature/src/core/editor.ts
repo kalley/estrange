@@ -146,7 +146,7 @@ export const createEditor = ({
 		if (isProcessing) return;
 
 		mutationProcessor.withPaused(() => {
-			isProcessing = true;
+			// isProcessing = true;
 
 			try {
 				for (const node of nodes) {
@@ -155,7 +155,7 @@ export const createEditor = ({
 					processBlock(block);
 				}
 			} finally {
-				isProcessing = false;
+				// isProcessing = false;
 			}
 		});
 	}

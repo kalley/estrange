@@ -25,7 +25,11 @@ export function createMutationProcessor(
 		for (const mut of mutations) {
 			// Handle normalization
 			for (const node of mut.addedNodes) {
-				if (node.parentNode === root && normalizeRootChild(node)) {
+				if (
+					(node.parentNode === root ||
+						["UL", "OL"].includes(node.parentNode?.nodeName ?? "")) &&
+					normalizeRootChild(node)
+				) {
 					pause();
 					didNormalize = true;
 					onNormalize?.(node);

@@ -1,5 +1,5 @@
 import { createTextWalker } from "../dom/walker";
-import { stripZWS } from "../dom/zw-utils";
+import { stripZWS, ZWS } from "../dom/zw-utils";
 import {
 	type Block,
 	type HeadingBlock,
@@ -57,6 +57,11 @@ export const applyInlineFormatting = (block: HTMLElement): FormattingResult => {
 
 		if (targetNode.parentNode !== block) {
 			targetNode = newWalker.nextNode();
+
+			if (!targetNode) {
+				targetNode = document.createTextNode(ZWS);
+				block.appendChild(targetNode);
+			}
 
 			if (targetNode?.parentNode === block) continue;
 		}

@@ -1,6 +1,6 @@
 import { isInlineElement, isInlineEmpty } from "./structure-utils";
-import { createElementWalker, createTextWalker } from "./walker";
-import { normalizeZWS, ZWS } from "./zw-utils";
+import { isHTMLElement, isTextNode } from "./utils";
+import { normalizeZWS, startsWithZWS, ZWS } from "./zw-utils";
 
 const getInlineElements = (root: HTMLElement): HTMLElement[] => {
 	return Array.from(root.querySelectorAll("strong, em, code, s"));
@@ -24,26 +24,57 @@ export const normalizeZWSInNode = (node: Text): void => {
 	}
 };
 
-export const normalizeZWSInElement = (element: Node): void => {
-	if (!element.firstChild) {
-		element.appendChild(document.createTextNode(ZWS));
+export const normalizeZWSInElement = (root: Node): void => {
+	// Ensure the root has at least one text node
+	if (!root.hasChildNodes()) {
+		root.appendChild(document.createTextNode(ZWS));
 		return;
 	}
 
-	const walker = createElementWalker(element);
+	const walker = document.createTreeWalker(
+		root,
+		NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+		null,
+	);
 
 	while (walker.nextNode()) {
-		const textWalker = createTextWalker(walker.currentNode);
+		const node = walker.currentNode;
 
-		while (textWalker.nextNode()) {
-			normalizeZWSInNode(textWalker.currentNode);
+		// 1️⃣ Normalize all text nodes
+		if (isTextNode(node)) {
+			if (!startsWithZWS(node.textContent ?? "")) {
+				node.textContent = normalizeZWS(node.textContent ?? "");
+			}
+			continue;
 		}
 
-		if (isInlineElement(walker.currentNode)) {
-			if (!walker.currentNode.nextSibling) {
-				walker.currentNode.parentNode?.appendChild(
-					document.createTextNode(ZWS),
-				);
+		if (!isHTMLElement(node)) continue;
+
+		// 2️⃣ Ensure every element has at least one text node
+		if (!node.hasChildNodes()) {
+			node.appendChild(document.createTextNode(ZWS));
+		}
+
+		// 3️⃣ Ensure inline elements are followed by ZWS
+		if (isInlineElement(node)) {
+			const next = node.nextSibling;
+
+			if (!next) {
+				// No next sibling → append ZWS to parent
+				node.parentNode?.appendChild(document.createTextNode(ZWS));
+				continue;
+			}
+
+			if (isTextNode(next)) {
+				if (!startsWithZWS(next.textContent ?? "")) {
+					next.textContent = normalizeZWS(next.textContent ?? "");
+				}
+				continue;
+			}
+
+			if (isHTMLElement(next)) {
+				// If next is another element (block or inline), ensure a ZWS between
+				node.parentNode?.insertBefore(document.createTextNode(ZWS), next);
 			}
 		}
 	}
