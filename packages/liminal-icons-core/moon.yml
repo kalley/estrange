@@ -1,0 +1,13 @@
+tasks:
+  batch-to-svg:
+    command:
+    - bash
+    - './scripts/batch_process.sh'
+    - './assets'
+    - './svg'
+    toolchain: system
+  to-svg:
+    command:
+    - bash
+    - './scripts/process.sh'
+    toolchain: system

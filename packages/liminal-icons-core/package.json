@@ -6,9 +6,5 @@
 	"private": true,
 	"devDependencies": {
 		"svgo": "^4.0.0"
-	},
-	"scripts": {
-		"batch-to-svg": "./scripts/batch_process.sh ./assets ./svg",
-		"to-svg": "./scripts/process.sh"
 	}
 }
