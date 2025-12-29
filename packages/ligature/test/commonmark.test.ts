@@ -1,6 +1,7 @@
 /// <reference path="./@types/commonmark-spec.d.ts" />
 import { type Test, tests } from "commonmark-spec";
 import { renderMarkdown } from "../src/core/renderer";
+import { ZWS } from "../src/dom/zw-utils";
 
 describe("Ligature parsing", () => {
 	const passing = [
@@ -35,20 +36,17 @@ describe("Ligature parsing", () => {
 			),
 	).forEach((sectionTests) => {
 		describe(sectionTests[0].section, () => {
-			it.each(sectionTests)(
-				"example $number: $markdown → $html",
-				({ markdown, html }) => {
-					const fragment = renderMarkdown(markdown.replace(/→/g, "\t"), {
-						includeZWS: false,
-						preserveStructure: true,
-					});
-					const div = document.createElement("div");
-					div.appendChild(fragment);
-					expect(div.innerHTML.replaceAll("<hr>", "<hr />")).toEqual(
-						html.replace(/\n/g, ""),
-					);
-				},
-			);
+			it.each(sectionTests)("example $number: $markdown → $html", ({
+				markdown,
+				html,
+			}) => {
+				const fragment = renderMarkdown(markdown.replace(/→/g, "\t"));
+				const div = document.createElement("div");
+				div.appendChild(fragment);
+				expect(div.innerHTML.replaceAll("<hr>", "<hr />")).toEqual(
+					html.replace(/\n/g, ""),
+				);
+			});
 		});
 	});
 });

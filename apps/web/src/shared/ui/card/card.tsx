@@ -1,5 +1,5 @@
 import type { ParentProps } from "solid-js";
-import * as styles from "./card.css.ts";
+import * as styles from "./card.css";
 
 export function Card(props: ParentProps<{ class?: string }>) {
 	return (

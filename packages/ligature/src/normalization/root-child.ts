@@ -10,6 +10,7 @@ export const normalizeRootChild = (node: Node) => {
 
 		p.textContent = node.textContent ?? "";
 		p.dataset.blockId = uniqueId("block");
+		console.log(node.nodeName);
 		node.replaceWith(p);
 		ensureBlockHasLeadingZWS(p);
 		setCursor(p.firstChild ?? p, p.textContent?.length ?? 1);

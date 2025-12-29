@@ -343,7 +343,7 @@ describe("createHistoryManager", () => {
 		it("undo handles multi-block changes", () => {
 			const history = createHistoryManager({});
 			const entryData = createMockEntryData(
-				"multi-block",
+				"split",
 				[
 					createMockBlock("block-1", "\u200BFirst"),
 					createMockBlock("block-2", "\u200BSecond"),
@@ -406,7 +406,7 @@ describe("createHistoryManager", () => {
 		it("handles cross-block range selections", () => {
 			const history = createHistoryManager({});
 			const entryData = createMockEntryData(
-				"multi-block",
+				"split",
 				[
 					createMockBlock("block-1", "\u200BFirst paragraph"),
 					createMockBlock("block-2", "\u200BSecond paragraph"),
@@ -420,8 +420,8 @@ describe("createHistoryManager", () => {
 			const result = history.undo();
 
 			expect(result?.blocks).toHaveLength(2);
-			expect(result?.selection.isRange).toBe(true);
-			expect(result?.selection.endBlockId).toBe("block-2");
+			expect(result?.selection?.isRange).toBe(true);
+			expect(result?.selection?.endBlockId).toBe("block-2");
 		});
 	});
 

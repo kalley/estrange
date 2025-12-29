@@ -1,6 +1,6 @@
 import { getByTestId } from "@testing-library/dom";
 import type { ActionContext } from "../src/actions/types";
-import { isKnownInlineElement } from "../src/actions/utils";
+import { isInlineElement } from "../src/dom/structure-utils";
 import { isHTMLElement } from "../src/dom/utils";
 import { createTextWalker } from "../src/dom/walker";
 import { ZWS } from "../src/dom/zw-utils";
@@ -29,7 +29,7 @@ export function assertZWSInvariants(
 
 		// Check if previous sibling is inline element
 		const prev = node.previousSibling;
-		if (isHTMLElement(prev) && isKnownInlineElement(prev)) {
+		if (isHTMLElement(prev) && isInlineElement(prev)) {
 			// This text node should follow the inline
 			if (!node.textContent?.startsWith(ZWS)) {
 				violations.push(
