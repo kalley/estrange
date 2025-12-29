@@ -1,7 +1,6 @@
 /// <reference path="./@types/commonmark-spec.d.ts" />
 import { type Test, tests } from "commonmark-spec";
 import { renderMarkdown } from "../src/core/renderer";
-import { ZWS } from "../src/dom/zw-utils";
 
 describe("Ligature parsing", () => {
 	const passing = [

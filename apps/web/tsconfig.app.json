@@ -16,9 +16,5 @@
 			]
 		}
 	},
-	"include": ["src"],
-	"references": [
-		{ "path": "../../packages/ligature" },
-		{ "path": "../../packages/liminal-icons-solid" }
-	]
+	"include": ["src"]
 }
