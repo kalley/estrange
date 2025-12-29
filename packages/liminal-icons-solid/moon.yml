@@ -1,0 +1,9 @@
+tasks:
+  svg-to-component:
+    command:
+    - node
+    - './scripts/svg-to-component.ts'
+    toolchain: node
+  test:
+    command: vitest
+    toolchain: node
