@@ -1,0 +1,13 @@
+{
+	"entry": ["src/index.tsx"],
+	"project": ["src/**/*.{ts,tsx}"],
+	"ignore": ["**/*.d.ts"],
+	"ignoreDependencies": [
+		"@js-temporal/polyfill",
+		"@estrange/ligature",
+		"@estrange/liminal-icons-solid"
+	],
+	"paths": {
+		"@/*": ["src/*"]
+	}
+}

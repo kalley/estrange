@@ -1,3 +1,4 @@
+import { query } from "@solidjs/router";
 import { type DBSchema, openDB } from "idb";
 import type { CreativePrompt } from "../model/creative-prompt.schema";
 
@@ -50,14 +51,30 @@ export async function savePrompt(prompt: Omit<CreativePrompt, "id">) {
 	return toStore;
 }
 
-export async function getAllPrompts(): Promise<CreativePrompt[]> {
+async function fetchAllPrompts(): Promise<CreativePrompt[]> {
 	const db = await dbPromise;
-	return db.getAll("prompts");
+	const tx = db.transaction("prompts", "readonly");
+	const store = tx.objectStore("prompts");
+	const index = store.index("by-created-at");
+
+	const results: CreativePrompt[] = [];
+
+	let cursor = await index.openCursor(null, "prev");
+
+	while (cursor) {
+		results.push(cursor.value);
+		cursor = await cursor.continue();
+	}
+
+	await tx.done;
+	return results;
 }
+
+export const getAllPrompts = query(() => fetchAllPrompts(), "allPrompts");
 
 /** Export all prompts as JSON string */
 export async function exportPrompts(): Promise<string> {
-	const all = await getAllPrompts();
+	const all = await fetchAllPrompts();
 	return JSON.stringify(all, null, 2);
 }
 
@@ -71,15 +88,7 @@ export async function importPrompts(json: string) {
 	}
 }
 
-/** Optional: fetch a prompt by sync_id */
-export async function getPrompt(
-	sync_id: string,
-): Promise<CreativePrompt | null> {
-	const db = await dbPromise;
-	return (await db.get("prompts", sync_id)) ?? null;
-}
-
-export async function getLatestPrompt(): Promise<CreativePrompt | null> {
+async function findLatestPrompt(): Promise<CreativePrompt | null> {
 	const db = await dbPromise;
 	const tx = db.transaction("prompts", "readonly");
 	const store = tx.objectStore("prompts");
@@ -91,3 +100,5 @@ export async function getLatestPrompt(): Promise<CreativePrompt | null> {
 	await tx.done;
 	return latest ?? null;
 }
+
+export const getLatestPrompt = query(() => findLatestPrompt(), "latestPrompt");

@@ -20,8 +20,8 @@ export const darkTheme = {
 		background: `lch(${L_BG_BASE}% 0 0)`, // deep background
 		foreground: `lch(${L_FG_BASE}% 0 0)`, // for elevated containers
 		surface: `lch(${L_SURFACE_BASE}% ${C_SURFACE} ${lch.H_PRIMARY})`,
-		text: `lch(${L_TEXT_PRIMARY}% 0 0)`, // high-contrast white text
-		textMuted: `lch(${L_TEXT_SECONDARY}% 0 0)`, // lower-contrast muted text
+		text: `lch(${L_TEXT_PRIMARY}% 0 ${lch.H_PRIMARY})`, // high-contrast white text
+		textMuted: `lch(${L_TEXT_SECONDARY}% 0 ${lch.H_PRIMARY})`, // lower-contrast muted text
 
 		border: `lch(${L_BORDER_BASE}% 0 0)`, // subtle separator color
 

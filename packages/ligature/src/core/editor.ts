@@ -208,10 +208,7 @@ export const createEditor = ({
 			queueMicrotask(() => {
 				saveHistoryEntry(event.key === "Enter" ? "split" : "delete");
 			});
-		}
 
-		// Always normalize after destructive keys
-		if (isDestructiveKey(event.key)) {
 			requestAnimationFrame(() => {
 				const range = getSelectionRange();
 				if (range) {
@@ -289,12 +286,34 @@ export const createEditor = ({
 	}, debounceMs);
 
 	return {
-		attach(el: HTMLElement) {
+		attach(el: HTMLElement, initialContent?: string) {
 			element = el;
 
 			if (!element.hasAttribute("contenteditable")) {
 				element.setAttribute("contenteditable", "true");
 			}
+
+			// Get initial markdown from element's text content or argument
+			const markdown = initialContent ?? element.textContent ?? "";
+
+			// Always start fresh - render markdown to proper structure
+			if (markdown.trim()) {
+				const fragment = renderMarkdown(markdown);
+				normalizeZWSInElement(fragment);
+				element.innerHTML = "";
+				element.appendChild(fragment);
+			} else {
+				element.innerHTML = "";
+			}
+
+			// Ensure all blocks have IDs
+			Array.from(element.children)
+				.filter(isHTMLElement)
+				.forEach((block) => {
+					if (!block.dataset.blockId) {
+						block.dataset.blockId = uniqueId("block");
+					}
+				});
 
 			// Create mutation processor
 			mutationProcessor = createMutationProcessor(element, debouncedProcess, {

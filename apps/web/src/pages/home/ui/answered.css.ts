@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { themeVars } from "@/shared/styles";
+import { baseVars, themeVars } from "@/shared/styles";
 
 export const body = style({
 	textAlign: "center",
@@ -13,5 +13,11 @@ export const linkList = style({
 });
 
 export const link = style({
+	background: 0,
+	border: 0,
 	color: themeVars.color.primary,
+	fontFamily: baseVars.font.family.base,
+	fontSize: "1rem",
+	lineHeight: baseVars.spacing.lg,
+	textDecoration: "underline",
 });

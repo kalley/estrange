@@ -13,6 +13,11 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
+use crate::metrics::{init_metrics, metrics, send_metrics_to_grafana, MetricsConfig, SessionTimer};
+
+mod metrics;
+mod user_agent;
+
 
 #[derive(Parser)]
 #[command(name = "estrange")]
@@ -59,6 +64,7 @@ enum Commands {
 struct Config {
     gemini_api_key: Option<String>,
     default_prompt_template: Option<String>,
+    metrics: Option<MetricsConfig>
 }
 
 impl Config {
@@ -192,20 +198,35 @@ impl GeminiClient {
 // Update your main function to handle the default behavior and new commands
 #[tokio::main]
 async fn main() -> Result<()> {
+    init_metrics()?;
+
     let cli = Cli::parse();
     let db = Database::new()?;
+
+    if let Err(e) = db.update_metrics() {
+            eprintln!("Warning: Failed to update metrics: {}", e);
+        }
 
     match cli.command {
         // Default behavior: bare `estrange` command
         None => {
+            if let Some( m) = metrics() {
+                m.command_used("receive");
+            }
             receive_and_respond(&db, cli.manual).await?;
         }
 
         Some(Commands::Receive { manual }) => {
+            if let Some( m) = metrics() {
+                m.command_used("receive");
+            }
             receive_and_respond(&db, manual || cli.manual).await?;
         }
 
         Some(Commands::Retrace { limit }) => {
+            if let Some( m) = metrics() {
+                m.command_used("retrace");
+            }
             let entries = db.list_entries(limit)?;
 
             if entries.is_empty() {
@@ -220,6 +241,10 @@ async fn main() -> Result<()> {
         }
 
         Some(Commands::Excavate { query }) => {
+            if let Some(m) = metrics() {
+                m.command_used("excavate");
+                m.search_performed();
+            }
             let entries = db.search_entries(&query)?;
 
             if entries.is_empty() {
@@ -234,6 +259,9 @@ async fn main() -> Result<()> {
         }
 
         Some(Commands::Witness) => {
+            if let Some( m) = metrics() {
+                m.command_used("witness");
+            }
             let (total, first, last) = db.get_stats()?;
 
             println!("🪞 Witnessing Your Creative Journey");
@@ -250,10 +278,18 @@ async fn main() -> Result<()> {
         }
 
         Some(Commands::Archive) => {
+            if let Some(m) = metrics() {
+                m.command_used("archive");
+                m.archive_exported();
+            }
             let json = db.export_all()?;
             println!("{}", json);
         }
     }
+
+    if let Err(e) = send_metrics_to_grafana().await {
+            eprintln!("Warning: Failed to send metrics: {}", e);
+        }
 
     Ok(())
 }
@@ -440,12 +476,18 @@ async fn receive_and_respond(db: &Database, manual_mode: bool) -> Result<()> {
         println!("💫 Carry this strangeness with you. Tomorrow brings new disruption.");
         return Ok(());
     }
+    // Start timing the entire session
+    let mut timer = SessionTimer::new();
 
     let prompt = if manual_mode {
         println!("📝 Enter your creative prompt:");
         let mut manual_prompt = String::new();
         std::io::stdin().read_line(&mut manual_prompt)?;
-        manual_prompt.trim().to_string()
+        let prompt = manual_prompt.trim().to_string();
+        if let Some(m) = metrics() {
+            m.prompt_manual(prompt.len());
+        }
+        prompt
     } else {
         println!("🌀 Receiving today's creative disruption...");
         let gemini = GeminiClient::new()?;
@@ -453,6 +495,9 @@ async fn receive_and_respond(db: &Database, manual_mode: bool) -> Result<()> {
 
         match gemini.generate_prompt(prompt_template).await {
             Ok(generated_prompt) => {
+                if let Some(m) = metrics() {
+                    m.prompt_generated(generated_prompt.len());
+                }
                 println!("✨ {}", generated_prompt);
                 generated_prompt
             }
@@ -461,7 +506,11 @@ async fn receive_and_respond(db: &Database, manual_mode: bool) -> Result<()> {
                 println!("📝 Please enter a prompt manually:");
                 let mut manual_prompt = String::new();
                 std::io::stdin().read_line(&mut manual_prompt)?;
-                manual_prompt.trim().to_string()
+                let prompt = manual_prompt.trim().to_string();
+                if let Some(m) = metrics() {
+                    m.prompt_manual(prompt.len());
+                }
+                prompt
             }
         }
     };
@@ -476,13 +525,32 @@ async fn receive_and_respond(db: &Database, manual_mode: bool) -> Result<()> {
         Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
     );
 
-    let response = get_editor_input(&template)?;
+    // Start timing the actual response writing
+    timer.start_response();
 
-    if response.is_empty() {
-        anyhow::bail!("Silence is also a response, but not today");
-    }
+    let response = match get_editor_input(&template) {
+            Ok(resp) => {
+                if resp.is_empty() {
+                    timer.abandon();
+                    anyhow::bail!("Silence is also a response, but not today");
+                }
+                resp
+            }
+            Err(e) => {
+                timer.abandon();
+                return Err(e);
+            }
+        };
+
+    // Record successful completion with timing
+    timer.finish_with_response(&response);
 
     db.add_entry(&prompt, &response)?;
+
+    // Update metrics after adding entry
+    if let Err(e) = db.update_metrics() {
+        eprintln!("Warning: Failed to update metrics: {}", e);
+    }
     Ok(())
 }
 

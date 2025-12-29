@@ -32,11 +32,12 @@ globalStyle("body", {
 });
 
 globalStyle("#root", {
-	height: "100vh",
+	height: "100dvh",
 });
 
 globalStyle("h1, h2, h3, h4, h5, h6", {
 	fontWeight: baseVars.font.weight.bold,
+	textAlign: "left",
 });
 
 globalStyle("h1", {
@@ -49,4 +50,26 @@ globalStyle("h2", {
 
 globalStyle("h3", {
 	fontSize: baseVars.font.size.md,
+});
+
+globalStyle("svg", {
+	display: "block",
+});
+
+globalStyle(".markdown-content ol, .markdown-content ul", {
+	margin: 0,
+	padding: 0,
+	marginLeft: baseVars.spacing.lg,
+	marginBottom: baseVars.spacing.md,
+});
+
+globalStyle(".markdown-content p", {
+	marginBottom: baseVars.spacing.md,
+});
+
+globalStyle("@counter-style estrange-steps", {
+	// @ts-expect-error vanilla extract doesn't directly support counter styles
+	system: "fixed",
+	symbols: "① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨",
+	suffix: "' '",
 });

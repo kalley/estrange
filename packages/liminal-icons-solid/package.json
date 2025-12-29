@@ -1,0 +1,21 @@
+{
+	"name": "@estrange/liminal-icons-solid",
+	"version": "1.0.0",
+	"description": "",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"svg-to-component": "node ./scripts/svg-to-component.ts",
+		"test": "vitest"
+	},
+	"devDependencies": {
+		"@types/node": "^25.0.3",
+		"glob": "^13.0.0",
+		"node-html-parser": "^7.0.1",
+		"solid-js": "^1.9.10",
+		"typescript": "^5.9.3"
+	},
+	"peerDependencies": {
+		"solid-js": "^1.9.10"
+	}
+}

@@ -5,4 +5,4 @@ export const breakpoints = {
 	xl: "1280px",
 };
 
-export type Breakpoint = keyof typeof breakpoints;
+type _Breakpoint = keyof typeof breakpoints;

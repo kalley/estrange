@@ -1,22 +1,25 @@
 import { A } from "@solidjs/router";
+import { useModal } from "@/shared/contexts/modal-context";
 import { microcopy } from "../home-page.css";
-import * as styles from "./answered.css";
+import { body, link, linkList } from "./answered.css";
 
 export function Answered() {
+	const { openPrompt } = useModal();
+
 	return (
 		<>
 			<h1>Today is complete.</h1>
-			<p class={styles.body}>
+			<p class={body}>
 				Your disruption has been captured. Tomorrow, another door.
 			</p>
-			<ul class={styles.linkList}>
+			<ul class={linkList}>
 				<li>
-					<A class={styles.link} href="/response">
+					<button class={link} onClick={openPrompt} type="button">
 						View Response
-					</A>
+					</button>
 				</li>
 				<li>
-					<A class={styles.link} href="/history">
+					<A class={link} href="/history">
 						Browse history
 					</A>
 				</li>

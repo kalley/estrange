@@ -1,5 +1,5 @@
 [package]
-name = "estrange"
+name = "estrange-cli"
 version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/kalley/estrange"
@@ -9,7 +9,9 @@ anyhow = { version = "1.0", features = ["backtrace"] }
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.0", features = ["derive"] }
 dirs = "5.0"
-reqwest = { version = "0.11", features = ["json"] }
+prometheus = "0.14.0"
+prometheus-reqwest-remote-write = "0.4.0"
+reqwest = { version = "0.12", features = ["json"] }
 rusqlite = "0.29"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

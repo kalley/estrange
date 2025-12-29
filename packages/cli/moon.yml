@@ -1,0 +1,11 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+language: rust
+
+tasks:
+  estrange:
+    description: Run Estrange
+    command: cargo run
+    options:
+      cache: false
+      interactive: true

@@ -1,21 +1,15 @@
-import { A, createAsync } from "@solidjs/router";
-import { Show } from "solid-js";
-import { fetchDailyPrompt, getLatestPrompt } from "@/entities/creative-prompts";
+import { A } from "@solidjs/router";
+import { useDailyPrompt } from "@/entities/creative-prompts";
+import { cta } from "@/shared/styles/cta.css";
 import { Card } from "@/shared/ui/card";
 import * as styles from "../home-page.css";
 import { microcopy } from "../home-page.css";
-import { Answered } from "./answered";
-import { cta } from "./cta.css";
 
 export function ReturnVisit() {
-	const todaysPrompt = createAsync(() => fetchDailyPrompt());
-	const latest = createAsync(() => getLatestPrompt());
+	const todaysPrompt = useDailyPrompt();
 
 	return (
-		<Show
-			fallback={<Answered />}
-			when={latest()?.prompt !== todaysPrompt()?.prompt}
-		>
+		<>
 			<h1>Another crack in the ordinary.</h1>
 			<Card>
 				<h2>Today's disruption</h2>
@@ -29,6 +23,6 @@ export function ReturnVisit() {
 				Each day offers one strange seed. Your task is simply to notice what
 				grows.
 			</div>
-		</Show>
+		</>
 	);
 }

@@ -43,6 +43,8 @@ jobs:
 
       - name: Build app
         working-directory: ./apps/web
+        env:
+          VITE_PROMPT_URL: 'https://estrange-prompt-server.kalley-powell.workers.dev/prompt'
         run: npm run build
 
       - name: Setup Pages

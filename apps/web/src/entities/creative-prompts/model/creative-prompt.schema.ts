@@ -19,7 +19,7 @@ const Stroke = z.object({
 	width: z.number().min(1),
 });
 
-export const creativePrompt = z.object({
+const creativePrompt = z.object({
 	id: z.number().positive(),
 	sync_id: z
 		.string()
@@ -29,6 +29,7 @@ export const creativePrompt = z.object({
 	created_at: z.iso.datetime().default(() => new Date().toISOString()),
 	modified_at: z.iso.datetime().default(() => new Date().toISOString()),
 	prompt: z.string().min(1),
+	prompt_tags: z.array(z.string().trim().min(1).max(50)).default([]),
 	response: z
 		.string()
 		.min(1, "Silence is also a response, but not today")
@@ -52,7 +53,5 @@ export const creativePromptCreate = creativePrompt
 			path: ["response"], // you could also set ["drawing_vector"], but this gives a single clear error path
 		},
 	);
-
-export type CreativePromptCreate = z.infer<typeof creativePromptCreate>;
 
 export type CreativePrompt = z.infer<typeof creativePrompt>;

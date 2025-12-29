@@ -1,13 +1,11 @@
 import { HashRouter } from "@solidjs/router";
+import { historyRoutes } from "@/pages/history";
 import { homeRoute } from "@/pages/home";
 import { Layout } from "./ui/layout/layout";
 
 const routes = [
 	homeRoute,
-	{
-		path: "/history",
-		component: () => <div>History</div>,
-	},
+	historyRoutes,
 	{
 		path: "/settings",
 		component: () => <div>Settings</div>,

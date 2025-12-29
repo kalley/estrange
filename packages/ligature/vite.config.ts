@@ -10,6 +10,7 @@ export default defineConfig({
 			formats: ["es"],
 			name: "Ligature",
 		},
+		minify: false,
 		outDir: "lib",
 	},
 	plugins: [dts({ include: ["src"] })],

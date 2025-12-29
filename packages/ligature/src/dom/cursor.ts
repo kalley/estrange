@@ -53,8 +53,9 @@ const convertBlockElement = (
 		? newElement.firstElementChild
 		: newElement;
 
-	if (isHTMLElement(targetNode))
+	if (isHTMLElement(targetNode)) {
 		targetNode.dataset.blockId = element.dataset.blockId;
+	}
 
 	if (isRoot) {
 		element.innerHTML = "";

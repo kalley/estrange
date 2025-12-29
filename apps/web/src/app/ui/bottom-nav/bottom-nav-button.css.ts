@@ -15,7 +15,7 @@ export const navButton = style({
 	cursor: "pointer",
 
 	":hover": {
-		color: themeVars.color.text,
+		color: themeVars.color.primary,
 	},
 });
 

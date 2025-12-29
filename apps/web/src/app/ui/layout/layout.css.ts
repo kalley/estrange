@@ -1,11 +1,18 @@
 import { style } from "@vanilla-extract/css";
-import { baseVars, themeVars } from "@/shared/styles";
+import { baseVars, breakpoints, themeVars } from "@/shared/styles";
 
 export const app = style({
 	display: "flex",
 	flexDirection: "column",
 	height: "100%",
+	position: "relative",
 	width: "100%",
+	"@media": {
+		[`screen and (min-width: ${breakpoints.sm})`]: {
+			marginInline: "auto",
+			width: "600px",
+		},
+	},
 });
 
 export const header = style({
@@ -13,6 +20,8 @@ export const header = style({
 	display: "flex",
 	flexDirection: "column",
 	gap: baseVars.spacing.sm,
+	borderBottom: `1px solid ${themeVars.color.border}`,
+	paddingBottom: baseVars.spacing.lg,
 });
 
 export const heading = style({
@@ -32,13 +41,14 @@ export const logo = style({
 });
 
 export const subtitle = style({
-	fontFamily: '"Caveat", cursive',
-	fontSize: baseVars.font.size.xl,
+	fontFamily: '"Space Grotesk", sans-serif',
+	fontSize: baseVars.font.size.lg,
+	fontStyle: "italic",
 	fontWeight: baseVars.font.weight.regular,
 });
 
 export const content = style({
 	flex: 1,
 	padding: baseVars.spacing.md,
-	paddingBottom: 60,
+	paddingBottom: 62,
 });
