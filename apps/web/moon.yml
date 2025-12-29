@@ -1,0 +1,21 @@
+tasks:
+  build:
+    command:
+    - vite
+    - build
+    deps:
+    - ~:build-dep1
+    toolchain: node
+  build-dep1:
+    command: tsc
+    toolchain: node
+  dev:
+    command: vite
+    local: true
+    toolchain: node
+  lint:
+    command:
+    - biome
+    - check
+    - '--write'
+    toolchain: node
