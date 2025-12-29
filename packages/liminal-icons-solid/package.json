@@ -5,7 +5,7 @@
 	"private": true,
 	"type": "module",
 	"peerDependencies": {
-		"solid-js": "^1.9.10"
+		"solid-js": "^1.9"
 	},
 	"devDependencies": {
 		"@types/node": "^25.0.3",
