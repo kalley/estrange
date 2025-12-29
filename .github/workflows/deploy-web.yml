@@ -29,20 +29,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: 'apps/web/package-lock.json'
 
       - name: Setup Moon
         uses: moonrepo/setup-toolchain@v0
         with:
           auto-install: true
 
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install
+
       - name: Build app
+        working-directory: ./apps/web
         env:
           VITE_PROMPT_URL: 'https://estrange-prompt-server.kalley-powell.workers.dev/prompt'
         run: moon run web:build

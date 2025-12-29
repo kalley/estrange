@@ -1,0 +1,19 @@
+{
+	"name": "estrange",
+	"version": "1.0.0",
+	"description": "A tool for daily creative disruption. Receive unexpected prompts, surrender to strangeness, witness your creative patterns emerge over time.",
+	"homepage": "https://github.com/kalley/estrange#readme",
+	"bugs": {
+		"url": "https://github.com/kalley/estrange/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kalley/estrange.git"
+	},
+	"license": "MIT",
+	"private": true,
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	]
+}
