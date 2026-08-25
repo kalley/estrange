@@ -94,7 +94,7 @@ async fn generate_daily_prompt(env: &Env) -> Result<PromptData> {
     headers.set("Content-Type", "application/json")?;
 
     let request = Request::new_with_init(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent",
         RequestInit::new()
             .with_method(Method::Post)
             .with_headers(headers)
