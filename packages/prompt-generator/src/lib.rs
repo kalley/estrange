@@ -89,7 +89,7 @@ async fn generate_daily_prompt(env: &Env) -> Result<PromptData> {
         }
     });
 
-    let mut headers = Headers::new();
+    let headers = Headers::new();
     headers.set("x-goog-api-key", &api_key)?;
     headers.set("Content-Type", "application/json")?;
 
@@ -172,7 +172,7 @@ async fn archive_to_git(env: &Env, prompt_data: &PromptData) -> Result<()> {
     // GitHub API request to create/update file
     let api_url = format!("https://api.github.com/repos/{}/contents/{}", repo, file_path);
 
-    let mut headers = Headers::new();
+    let headers = Headers::new();
     headers.set("Authorization", &format!("Bearer {}", github_token))?;
     headers.set("Content-Type", "application/json")?;
     headers.set("User-Agent", "estrange-worker")?;
